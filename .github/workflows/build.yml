@@ -1,0 +1,18 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v2
+    - name: Use docker action to build
+      uses: dchaves/arduino-cli-esp32
+      with:
+        action: compile
+        sketch: gooseka
+        board: esp32:esp32:esp32doit-devkit-v1
+        libraries: ESP32Servo LoRa
