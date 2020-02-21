@@ -10,7 +10,7 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v2
     - name: Use docker action to build
-      uses: dchaves/arduino-cli-esp32
+      uses: dchaves/arduino-cli-esp32@v1
       with:
         action: compile
         sketch: gooseka
