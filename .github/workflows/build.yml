@@ -16,3 +16,5 @@ jobs:
         sketch: gooseka
         board: esp32:esp32:esp32doit-devkit-v1
         libraries: ESP32Servo LoRa
+      env:
+        HOME: /root
