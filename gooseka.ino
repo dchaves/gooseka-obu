@@ -131,8 +131,8 @@ void ESC_control_task(void* param) {
     memset(&control,0,sizeof(ESC_control_t));
 
     // Telemetry serial lines
-    LEFT_ESC_serial.begin(115200, SERIAL_8N1, LEFT_TELEMETRY_READ_PIN, LEFT_TELEMETRY_UNUSED_PIN);
-    RIGHT_ESC_serial.begin(115200, SERIAL_8N1, RIGHT_TELEMETRY_READ_PIN, RIGHT_TELEMETRY_UNUSED_PIN);
+    LEFT_ESC_serial.begin(LEFT_TELEMETRY_SERIAL_BAUDS, SERIAL_8N1, LEFT_TELEMETRY_READ_PIN, LEFT_TELEMETRY_UNUSED_PIN);
+    RIGHT_ESC_serial.begin(RIGHT_TELEMETRY_SERIAL_BAUDS, SERIAL_8N1, RIGHT_TELEMETRY_READ_PIN, RIGHT_TELEMETRY_UNUSED_PIN);
 
     // Empty Rx Serial of garbage telemetry
     while(LEFT_ESC_serial.available()) {
@@ -178,7 +178,7 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
     // Console output
-    DEBUG_BEGIN(115200);
+    DEBUG_BEGIN(SERIAL_BAUDRATE);
 
     // Init radio interface
     init_radio();
@@ -192,7 +192,7 @@ void setup() {
     // Start ESC control task
     xTaskCreatePinnedToCore(ESC_control_task, "ESC_controller", 10000, NULL, 1, NULL, 0);
     // Start LoRa receiver task
-    xTaskCreatePinnedToCore(radio_receive_task, "radio_receiver", 100000, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(radio_receive_task, "radio_receiver", 10000, NULL, 1, NULL, 1);
 }
 
 void loop() {
