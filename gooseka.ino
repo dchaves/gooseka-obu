@@ -76,14 +76,16 @@ void radio_receive_task(void* param) {
         if (packetSize == sizeof(ESC_control_t)) {
             memcpy(&control, radio_buffer, sizeof(ESC_control_t));
             last_received_millis = millis();
-            xQueueSend(control_queue, &control, 0);
-            
-            DEBUG_PRINT("Received commands: ");
-            DEBUG_PRINT(control.left.duty);
-            DEBUG_PRINT(",");
-            DEBUG_PRINT(control.right.duty);
-            DEBUG_PRINT(",");
-            DEBUG_PRINTLN(LoRa.packetRssi());
+            if(control.magic_number == MAGIC_NUMBER) {
+                xQueueSend(control_queue, &control, 0);
+                
+                DEBUG_PRINT("Received commands: ");
+                DEBUG_PRINT(control.left.duty);
+                DEBUG_PRINT(",");
+                DEBUG_PRINT(control.right.duty);
+                DEBUG_PRINT(",");
+                DEBUG_PRINTLN(LoRa.packetRssi());
+            }
         } else if(millis() - last_received_millis > RADIO_IDLE_TIMEOUT) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();

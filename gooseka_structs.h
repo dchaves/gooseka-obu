@@ -34,6 +34,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     ESC_oneside_control_t left;
     ESC_oneside_control_t right;
+    uint8_t magic_number;
 } ESC_control_t;
 
 #endif /* GOOSEKA_STRUCTS_H */
