@@ -54,7 +54,7 @@ int receive_radio_packet(uint8_t* buffer, int size) {
 // 1. Set LEFT & RIGHT ESC duty cycle
 void radio_receive_task(void* param) {
     uint8_t radio_buffer[sizeof(ESC_control_t)];
-    uint8_t index;
+    // uint8_t index;
     ESC_control_t control;
     uint32_t last_received_millis;
     Servo LEFT_ESC_servo;
@@ -65,6 +65,7 @@ void radio_receive_task(void* param) {
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
     last_sent_millis = millis();
+    last_received_millis = 0;
     
     // Configure servos
     LEFT_ESC_servo.attach(LEFT_PWM_PIN, PWM_MIN, PWM_MAX);
