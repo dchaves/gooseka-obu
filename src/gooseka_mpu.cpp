@@ -29,6 +29,8 @@
 
 #define PI 3.1415
 
+#define MPU_CLOCK 400000
+
 const int MPU_ADDR = 0x68;
 const int SDA_PIN = 21;
 const int SCL_PIN = 22;
@@ -97,7 +99,7 @@ uint8_t mpu_who_am_i(void)
 void setup_mpu(void)
 {
   Wire.begin();
-  Wire.setClock(400000); //comment this line with compilation issues
+  Wire.setClock(MPU_CLOCK); //comment this line with compilation issues
   
   // hardware reset
   mpu_write_register(MPU_ADDR, MPU_PWR_MGMT_1, 0x80);
