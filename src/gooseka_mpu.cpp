@@ -3,6 +3,7 @@
 #define BYTE 8
 #define MPU_CAL_SAMPLE_NUM 100
 #define MPU_AVERAGE_FACTOR 2
+#define MPU_COMPLEMENT_2_FACTOR 2
 #define MPU_CAL_SAMPLE_MS 1
 
 #define MPU_SMPLRT_DIV 25
@@ -28,7 +29,6 @@
 
 #define PI 3.1415
 
-# FIXME: check addr
 const int MPU_ADDR = 0x68;
 const int SDA_PIN = 21;
 const int SCL_PIN = 22;
@@ -76,7 +76,7 @@ void mpu_write_register(uint8_t address, uint8_t _register, uint8_t value)
  */
 uint8_t mpu_who_am_i(void)
 {
-	return mpu_read_register(MPU_WHOAMI);
+  return mpu_read_register(MPU_ADDR, MPU_WHOAMI);
 }
 
 /**
@@ -113,7 +113,7 @@ void setup_mpu(void)
   
   mpu_write_register(MPU_ADDR, MPU_SMPLRT_DIV, 0x00);
   mpu_write_register(MPU_ADDR, MPU_CONFIG, 0x00);
-  mpu_write_register(MPU_GYRO_CONFIG, 0x18);
+  mpu_write_register(MPU_ADDR, MPU_GYRO_CONFIG, 0x18);
 
   // wait 100 ms
   delay(100);
@@ -144,7 +144,6 @@ void gyro_z_calibration(void)
 	float zout_av = 0;
 	int8_t i;
 
-	deg_integ = 0;
 	for (i = 0; i < MPU_CAL_SAMPLE_NUM; i++) {
 		zout_av = ((float)mpu_read_gyro_z_raw() + zout_av) /
 			  MPU_AVERAGE_FACTOR;
