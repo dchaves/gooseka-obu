@@ -4,9 +4,12 @@
 #include <SPI.h>
 #include <LoRa.h>
 
+
 #include "gooseka_helpers.h"
 #include "gooseka_structs.h"
 #include "gooseka_defs.h"
+#include "gooseka_mpu.h"
+
 
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
