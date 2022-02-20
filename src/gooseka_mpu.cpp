@@ -32,7 +32,6 @@
 const int MPU_ADDR = 0x68;
 const int SDA_PIN = 21;
 const int SCL_PIN = 22;
-const int MPU_CLOCK_SPEED = 100000; # FIXME: check value
 
 static volatile int16_t gyro_z_raw;
 
