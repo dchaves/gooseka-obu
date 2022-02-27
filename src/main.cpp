@@ -181,6 +181,19 @@ void ESC_control_task(void* param) {
     vTaskDelete(NULL);
 }
 
+// MPU read task
+void MPU_read_task(void* param) {
+    DEBUG_PRINT("MPU: ");
+    DEBUG_PRINTLN(mpu_who_am_i());
+    while (1) {
+        update_gyro_readings();
+        DEBUG_PRINT("DPS: ");
+        DEBUG_PRINTLN(get_gyro_z_dps());
+        vTaskDelay(20);
+    }
+    vTaskDelete(NULL);
+}
+
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
@@ -189,6 +202,9 @@ void setup() {
 
     // Init radio interface
     init_radio();
+
+    // Setup MPU
+    setup_mpu();
 
     // Init control msg queue
     control_queue = xQueueCreate(QUEUE_SIZE, sizeof(ESC_control_t));
@@ -200,6 +216,8 @@ void setup() {
     xTaskCreatePinnedToCore(ESC_control_task, "ESC_controller", 10000, NULL, 1, NULL, 0);
     // Start LoRa receiver task
     xTaskCreatePinnedToCore(radio_receive_task, "radio_receiver", 10000, NULL, 1, NULL, 1);
+    // Start MPU reader task
+    xTaskCreate(MPU_read_task, "MPU_reader", 10000, NULL, 1, NULL);
 }
 
 void loop() {

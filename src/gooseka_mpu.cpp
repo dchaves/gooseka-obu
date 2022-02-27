@@ -43,15 +43,13 @@ static volatile int16_t gyro_z_raw;
  * @param[in] address mpu address 
  * @param[in] _register Register address.
  */
-uint8_t mpu_read_register(uint8_t address, uint8_t _register)
-{
-  uint8_t reading;
-
+uint8_t mpu_read_register(uint8_t address, uint8_t _register) {
   Wire.beginTransmission(address);
   Wire.write(_register);
   Wire.endTransmission();
 
-  return reading;
+  Wire.requestFrom(address, (uint8_t) 1);
+  return Wire.read();
 }
 
 
@@ -187,4 +185,11 @@ float get_gyro_z_radps(void)
 float get_gyro_z_dps(void)
 {
 	return ((float)gyro_z_raw / MPU_GYRO_SENSITIVITY_2000_DPS);
+}
+
+/**
+ * @brief Get gyroscope's Z-axis angular displacement in degrees.
+ */
+float get_gyro_z_degrees(void) {
+  return 0;
 }
