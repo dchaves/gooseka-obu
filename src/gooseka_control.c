@@ -32,7 +32,7 @@ void reset_angular_control(void)
 /*
  * @brief update angular contribution to pwm
  */
-void angular_control(float angular_target_velocity,
+float angular_control(float angular_target_velocity,
                      float angular_meas_velocity)
 {
    angular_error += angular_target_velocity - angular_meas_velocity;
