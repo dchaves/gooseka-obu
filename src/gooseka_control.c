@@ -35,6 +35,8 @@ void reset_angular_control(void)
 float angular_control(float angular_target_velocity,
                      float angular_meas_velocity)
 {
+  float angular_voltage;
+  
    angular_error += angular_target_velocity - angular_meas_velocity;
 
    control = get_control_constants();
