@@ -9,6 +9,7 @@
 #include "gooseka_structs.h"
 #include "gooseka_defs.h"
 #include "gooseka_mpu.h"
+#include "gooseka_control.h"
 
 
 QueueHandle_t control_queue;

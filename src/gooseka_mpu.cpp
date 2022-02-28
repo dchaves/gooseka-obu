@@ -187,9 +187,4 @@ float get_gyro_z_dps(void)
 	return ((float)gyro_z_raw / MPU_GYRO_SENSITIVITY_2000_DPS);
 }
 
-/**
- * @brief Get gyroscope's Z-axis angular displacement in degrees.
- */
-float get_gyro_z_degrees(void) {
-  return 0;
-}
+
