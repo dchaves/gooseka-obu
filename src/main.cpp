@@ -189,7 +189,7 @@ void MPU_read_task(void* param) {
         update_gyro_readings();
         DEBUG_PRINT("DPS: ");
         DEBUG_PRINTLN(get_gyro_z_dps());
-        vTaskDelay(20);
+        vTaskDelay(10);
     }
     vTaskDelete(NULL);
 }
