@@ -1,6 +1,7 @@
 #ifndef GOOSEKA_CONTROL_H
 #define GOOSEKA_CONTROL_H
 
+#include <stdint.h>
 
 /** Control constants */
 #define KP_LINEAR 8. // FIXME: bulebule specs
@@ -16,6 +17,8 @@ struct control_constants {
   float kd_angular;
 };
 
+
+int32_t voltage_to_motor_pwm(float voltage, int32_t pwm_min, int32_t pwm_max);
 void set_control_constants(struct control_constants value); // Used by mmlib (command) 
 struct control_constants get_control_constants(void);
 

@@ -37,4 +37,9 @@ typedef struct __attribute__((packed)) {
     uint8_t magic_number;
 } ESC_control_t;
 
+typedef struct __attribute__((packed)) {
+  float angular_voltage;
+} MPU_angular_control_t;
+
+
 #endif /* GOOSEKA_STRUCTS_H */

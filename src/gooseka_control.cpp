@@ -3,16 +3,26 @@
 static volatile float angular_error;
 static volatile float last_angular_error;
 
-static volatile struct control_constants control = {
-                                                    .kp_linear = KP_LINEAR,
-                                                    .kd_linear = KD_LINEAR,
-                                                    .kp_angular = KP_ANGULAR,
-                                                    .kd_angular = KD_ANGULAR};
+static struct control_constants control = {
+                                           .kp_linear = KP_LINEAR,
+                                           .kd_linear = KD_LINEAR,
+                                           .kp_angular = KP_ANGULAR,
+                                           .kd_angular = KD_ANGULAR};
 
 
 struct control_constants get_control_constants(void)
 {
   return control;
+}
+
+
+/*
+  @brief transform voltage to pwm duty
+
+ */
+int32_t voltage_to_motor_pwm(float voltage, int32_t pwm_min, int32_t pwm_max)
+{
+  return voltage * (pwm_max - pwm_min) + pwm_min;
 }
 
 void set_control_constants(struct control_constants value)
