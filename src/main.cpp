@@ -16,35 +16,6 @@ QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
 
 
-/**
- * @brief filter pwm to avoid out of limit options
- */
-uint8_t filter_pwm(int32_t power)
-{
-
-  uint8_t pwm;
-  
-  if (power < 0)
-    {
-      pwm = 0;
-    }
-
-  else if (power > 255)
-    {
-      pwm = 255;
-    }
-
-  else
-    {
-      pwm = power;
-    }
-  
-  return pwm;
-}
-
-=======
-QueueHandle_t angular_control_queue;
->>>>>>> Replaced pwm_limit() with built-in function constrain()
 
 void init_radio() {
     // Set SPI LoRa pins
@@ -173,13 +144,10 @@ void radio_receive_task(void* param) {
           angular_control_left = linear_target + angular_control_pid;
           angular_control_right = linear_target - angular_control_pid;
           
-<<<<<<< HEAD
-          pwm_left = filter_pwm(voltage_to_motor_pwm(angular_control_left, 0, 255));
-          pwm_right = filter_pwm(voltage_to_motor_pwm(angular_control_right, 0, 255));
-=======
-          pwm_left = voltage_to_motor_pwm(voltage_left, 0, 255);
-          pwm_right = voltage_to_motor_pwm(voltage_right, 0, 255);
->>>>>>> Replaced pwm_limit() with built-in function constrain()
+
+          pwm_left = voltage_to_motor_pwm(angular_control_left, 0, 255);
+          pwm_right = voltage_to_motor_pwm(angular_control_right, 0, 255);
+
           
         }
         else
