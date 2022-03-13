@@ -22,7 +22,7 @@ struct control_constants get_control_constants(void)
  */
 int32_t voltage_to_motor_pwm(float voltage, int32_t pwm_min, int32_t pwm_max)
 {
-  return voltage * (pwm_max - pwm_min) + pwm_min;
+  return constrain(voltage * (pwm_max - pwm_min) + pwm_min, pwm_min, pwm_max);
 }
 
 void set_control_constants(struct control_constants value)

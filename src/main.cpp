@@ -16,34 +16,6 @@ QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
 QueueHandle_t angular_control_queue;
 
-
-/**
- * @brief filter pwm to avoid out of limit options
- */
-uint8_t filter_pwm(int32_t power)
-{
-
-  uint8_t pwm;
-  
-  if (power < 0)
-    {
-      pwm = 0;
-    }
-
-  else if (power > 255)
-    {
-      pwm = 255;
-    }
-
-  else
-    {
-      pwm = power;
-    }
-  
-  return pwm;
-}
-
-
 void init_radio() {
     // Set SPI LoRa pins
     SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
@@ -148,8 +120,8 @@ void radio_receive_task(void* param) {
           voltage_left = linear_voltage + angular_control_msg.angular_voltage;
           voltage_right = linear_voltage - angular_control_msg.angular_voltage;
           
-          pwm_left = filter_pwm(voltage_to_motor_pwm(voltage_left, 0, 255));
-          pwm_right = filter_pwm(voltage_to_motor_pwm(voltage_right, 0, 255));
+          pwm_left = voltage_to_motor_pwm(voltage_left, 0, 255);
+          pwm_right = voltage_to_motor_pwm(voltage_right, 0, 255);
           
         }
         else

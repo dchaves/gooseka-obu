@@ -2,6 +2,7 @@
 #define GOOSEKA_CONTROL_H
 
 #include <stdint.h>
+#include <Arduino.h>
 
 /** Control constants */
 #define KP_LINEAR 8. // FIXME: bulebule specs
