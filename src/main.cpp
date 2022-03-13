@@ -140,13 +140,13 @@ void radio_receive_task(void* param) {
         // picking left duty as target velocity
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
-        float linear_voltage = control.left.duty;
+        float linear_control = control.left.duty;
         
         xQueueReceive(angular_control_queue, &angular_control_msg, 0);
         
-        if (linear_voltage > 0) {        
-          angular_control_left = linear_voltage + angular_control_msg.angular_control;
-          angular_control_right = linear_voltage - angular_control_msg.angular_control;
+        if (linear_control > 0) {        
+          angular_control_left = linear_control + angular_control_msg.angular_control;
+          angular_control_right = linear_control - angular_control_msg.angular_control;
           
           pwm_left = filter_pwm(voltage_to_motor_pwm(angular_control_left, 0, 255));
           pwm_right = filter_pwm(voltage_to_motor_pwm(angular_control_right, 0, 255));
