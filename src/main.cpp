@@ -98,8 +98,8 @@ void radio_receive_task(void* param) {
     //TODO: Should add the linear control in the future
     MPU_angular_control_t angular_control_msg;
     
-    float voltage_left = 0.0;
-    float voltage_right = 0.0;
+    float angular_control_left = 0.0;
+    float angular_control_right = 0.0;
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
 
@@ -145,11 +145,11 @@ void radio_receive_task(void* param) {
         xQueueReceive(angular_control_queue, &angular_control_msg, 0);
         
         if (linear_voltage > 0) {        
-          voltage_left = linear_voltage + angular_control_msg.angular_voltage;
-          voltage_right = linear_voltage - angular_control_msg.angular_voltage;
+          angular_control_left = linear_voltage + angular_control_msg.angular_control;
+          angular_control_right = linear_voltage - angular_control_msg.angular_control;
           
-          pwm_left = filter_pwm(voltage_to_motor_pwm(voltage_left, 0, 255));
-          pwm_right = filter_pwm(voltage_to_motor_pwm(voltage_right, 0, 255));
+          pwm_left = filter_pwm(voltage_to_motor_pwm(angular_control_left, 0, 255));
+          pwm_right = filter_pwm(voltage_to_motor_pwm(angular_control_right, 0, 255));
           
         }
         else
@@ -259,9 +259,9 @@ void angular_control_task(void* param) {
 
         // Measure angular velocity
         float meas_angular_vel = get_gyro_z_radps();
-        float angular_voltage = angular_control(target_angular_vel, meas_angular_vel);
+        float angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
 
-        angular_control_msg.angular_voltage = angular_voltage;     
+        angular_control_msg.angular_control = angular_control;     
         xQueueSend(angular_control_queue, &angular_control_msg, 0);
         
         vTaskDelay(20);        

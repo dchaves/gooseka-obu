@@ -38,7 +38,7 @@ typedef struct __attribute__((packed)) {
 } ESC_control_t;
 
 typedef struct __attribute__((packed)) {
-  float angular_voltage;
+  float angular_control;
 } MPU_angular_control_t;
 
 

@@ -42,19 +42,19 @@ void reset_angular_control(void)
 /*
  * @brief update angular contribution to pwm
  */
-float angular_control(float angular_target_velocity,
+float get_angular_control(float angular_target_velocity,
                      float angular_meas_velocity)
 {
-  float angular_voltage;
+  float angular_control;
   
    angular_error += angular_target_velocity - angular_meas_velocity;
 
    control = get_control_constants();
 
-   angular_voltage =  control.kp_angular * angular_error +
+   angular_control =  control.kp_angular * angular_error +
      control.kd_angular * (angular_error - last_angular_error);
 
-   return angular_voltage;
+   return angular_control;
    
 }
 

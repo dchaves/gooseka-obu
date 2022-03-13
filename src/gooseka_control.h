@@ -23,7 +23,7 @@ void set_control_constants(struct control_constants value); // Used by mmlib (co
 struct control_constants get_control_constants(void);
 
 void reset_angular_control(void);
-float angular_control(float angular_target_velocity,
+float get_angular_control(float angular_target_velocity,
                      float angular_meas_velocity);
 
 #endif /* GOOSEKA_CONTROL_H */
