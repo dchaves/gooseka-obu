@@ -47,6 +47,7 @@ float get_angular_control(float angular_target_velocity,
 {
   float angular_control;
   
+  last_angular_error = angular_error;
    angular_error += angular_target_velocity - angular_meas_velocity;
 
    control = get_control_constants();
