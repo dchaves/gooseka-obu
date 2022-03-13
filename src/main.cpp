@@ -14,7 +14,6 @@
 
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
-QueueHandle_t angular_control_queue;
 
 void init_radio() {
     // Set SPI LoRa pins
@@ -55,6 +54,27 @@ int receive_radio_packet(uint8_t* buffer, int size) {
     return packetSize;
 }
 
+uint32_t time_since(uint32_t reference_time) {
+    return millis() - reference_time;
+}
+
+float update_angular_control(uint32_t* last_update_millis, float target_angular_vel) {
+    // Do this once every GYRO_UPDATE_TIME ms
+    if (time_since(*last_update_millis) < GYRO_UPDATE_TIME) {
+        return 0.0; // TODO check if it is better to return last value or 0
+    }
+    *last_update_millis = millis();
+    update_gyro_readings();
+    DEBUG_PRINT("DPS: ");
+    DEBUG_PRINTLN(get_gyro_z_dps());
+
+    // Measure angular velocity
+    float meas_angular_vel = get_gyro_z_radps();
+    float angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
+
+    return angular_control;
+}
+
 // CPU #1
 // 0. Read incoming message
 // 1. Set LEFT & RIGHT ESC duty cycle
@@ -66,12 +86,13 @@ void radio_receive_task(void* param) {
     Servo LEFT_ESC_servo;
     Servo RIGHT_ESC_servo;
     uint32_t last_sent_millis;
+    uint32_t last_angular_update_millis;
     ESC_telemetry_t telemetry;
     //TODO: Should add the linear control in the future
     MPU_angular_control_t angular_control_msg;
     
-    float voltage_left = 0.0;
-    float voltage_right = 0.0;
+    float angular_control_left = 0.0;
+    float angular_control_right = 0.0;
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
 
@@ -81,6 +102,7 @@ void radio_receive_task(void* param) {
 
     last_sent_millis = millis();
     last_received_millis = 0;
+    last_angular_update_millis = 0;
     
     // Configure servos
     LEFT_ESC_servo.attach(LEFT_PWM_PIN, PWM_MIN, PWM_MAX);
@@ -96,30 +118,30 @@ void radio_receive_task(void* param) {
                 xQueueSend(control_queue, &control, 0);
                 
                 DEBUG_PRINT("Received commands: ");
-                DEBUG_PRINT(control.left.duty);
+                DEBUG_PRINT(control.linear.duty);
                 DEBUG_PRINT(",");
-                DEBUG_PRINT(control.right.duty);
+                DEBUG_PRINT(control.angular.duty);
                 DEBUG_PRINT(",");
                 DEBUG_PRINTLN(LoRa.packetRssi());
             }
-        } else if(millis() - last_received_millis > RADIO_IDLE_TIMEOUT) {
+        } else if(time_since(last_received_millis) > RADIO_IDLE_TIMEOUT) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
-            control.left.duty = 0;
-            control.right.duty = 0;
+            control.linear.duty = 0;
+            control.angular.duty = 0;
         }
 
-        // picking left duty as target velocity
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
-        float linear_voltage = control.left.duty;
+        float linear_target = control.linear.duty;
+        float angular_target = control.angular.duty;
         
-        xQueueReceive(angular_control_queue, &angular_control_msg, 0);
+        float angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
         
-        if (linear_voltage > 0) {        
-          voltage_left = linear_voltage + angular_control_msg.angular_voltage;
-          voltage_right = linear_voltage - angular_control_msg.angular_voltage;
-          
+        if (linear_target > 0) {        
+          angular_control_left = linear_target + angular_control_pid;
+          angular_control_right = linear_target - angular_control_pid;    
+
           pwm_left = voltage_to_motor_pwm(voltage_left, 0, 255);
           pwm_right = voltage_to_motor_pwm(voltage_right, 0, 255);
           
@@ -133,7 +155,7 @@ void radio_receive_task(void* param) {
         LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
         RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
 
-        if(millis() - last_sent_millis > LORA_SLOWDOWN) {
+        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
             // Send enqueued msgs
             last_sent_millis = millis();
             xQueueReceive(telemetry_queue, &telemetry, 0);
@@ -187,7 +209,7 @@ void ESC_control_task(void* param) {
         if(LEFT_ESC_serial.available()) {
             // DEBUG_PRINTLN("LEFT AVAILABLE");
             if(read_telemetry(&LEFT_ESC_serial, &LEFT_serial_buffer, &(telemetry.left))) {
-                telemetry.left.duty = control.left.duty;
+                telemetry.left.duty = control.linear.duty;
                 LEFT_telemetry_complete = true;
                 // DEBUG_PRINTLN("LEFT TELEMETRY");
             }
@@ -196,7 +218,7 @@ void ESC_control_task(void* param) {
         if(RIGHT_ESC_serial.available()) {
             // DEBUG_PRINTLN("RIGHT AVAILABLE");
             if(read_telemetry(&RIGHT_ESC_serial, &RIGHT_serial_buffer, &(telemetry.right))) {
-                telemetry.right.duty = control.right.duty;
+                telemetry.right.duty = control.angular.duty;
                 RIGHT_telemetry_complete = true;
                 // DEBUG_PRINTLN("RIGHT TELEMETRY");
             }
@@ -212,35 +234,6 @@ void ESC_control_task(void* param) {
     }
     vTaskDelete(NULL);
 }
-
-// angular control task
-void angular_control_task(void* param) {
-
-    MPU_angular_control_t angular_control_msg;
-    float target_angular_vel = 0.0; // FIXME: hardcoded (and angular error should reset after every new command)
-    
-    memset(&angular_control_msg,0,sizeof(MPU_angular_control_t));
-    
-    DEBUG_PRINT("MPU: ");
-    DEBUG_PRINTLN(mpu_who_am_i());
-    
-    while (1) {
-        update_gyro_readings();
-        DEBUG_PRINT("DPS: ");
-        DEBUG_PRINTLN(get_gyro_z_dps());
-
-        // Measure angular velocity
-        float meas_angular_vel = get_gyro_z_radps();
-        float angular_voltage = angular_control(target_angular_vel, meas_angular_vel);
-
-        angular_control_msg.angular_voltage = angular_voltage;     
-        xQueueSend(angular_control_queue, &angular_control_msg, 0);
-        
-        vTaskDelay(20);        
-    }
-    vTaskDelete(NULL);
-}
-
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
@@ -260,15 +253,10 @@ void setup() {
     // Init telemetry msg queue
     telemetry_queue = xQueueCreate(QUEUE_SIZE, sizeof(ESC_telemetry_t));
 
-    // Init pwm control queue
-    angular_control_queue = xQueueCreate(QUEUE_SIZE, sizeof(MPU_angular_control_t));
-
     // Start ESC control task
     xTaskCreatePinnedToCore(ESC_control_task, "ESC_controller", 10000, NULL, 1, NULL, 0);
     // Start LoRa receiver task
     xTaskCreatePinnedToCore(radio_receive_task, "radio_receiver", 10000, NULL, 1, NULL, 1);
-    // Start MPU reader task (angular control)
-    xTaskCreate(angular_control_task, "angular_control", 10000, NULL, 1, NULL);
 }
 
 void loop() {
