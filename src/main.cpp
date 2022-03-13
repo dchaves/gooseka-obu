@@ -14,7 +14,7 @@
 
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
-<<<<<<< HEAD
+
 
 /**
  * @brief filter pwm to avoid out of limit options
