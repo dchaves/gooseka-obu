@@ -124,23 +124,22 @@ void radio_receive_task(void* param) {
                 xQueueSend(control_queue, &control, 0);
                 
                 DEBUG_PRINT("Received commands: ");
-                DEBUG_PRINT(control.left.duty);
+                DEBUG_PRINT(control.linear.duty);
                 DEBUG_PRINT(",");
-                DEBUG_PRINT(control.right.duty);
+                DEBUG_PRINT(control.angular.duty);
                 DEBUG_PRINT(",");
                 DEBUG_PRINTLN(LoRa.packetRssi());
             }
         } else if(millis() - last_received_millis > RADIO_IDLE_TIMEOUT) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
-            control.left.duty = 0;
-            control.right.duty = 0;
+            control.linear.duty = 0;
+            control.angular.duty = 0;
         }
 
-        // picking left duty as target velocity
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
-        float linear_control = control.left.duty;
+        float linear_control = control.linear.duty;
         
         xQueueReceive(angular_control_queue, &angular_control_msg, 0);
         
@@ -215,7 +214,7 @@ void ESC_control_task(void* param) {
         if(LEFT_ESC_serial.available()) {
             // DEBUG_PRINTLN("LEFT AVAILABLE");
             if(read_telemetry(&LEFT_ESC_serial, &LEFT_serial_buffer, &(telemetry.left))) {
-                telemetry.left.duty = control.left.duty;
+                telemetry.left.duty = control.linear.duty;
                 LEFT_telemetry_complete = true;
                 // DEBUG_PRINTLN("LEFT TELEMETRY");
             }
@@ -224,7 +223,7 @@ void ESC_control_task(void* param) {
         if(RIGHT_ESC_serial.available()) {
             // DEBUG_PRINTLN("RIGHT AVAILABLE");
             if(read_telemetry(&RIGHT_ESC_serial, &RIGHT_serial_buffer, &(telemetry.right))) {
-                telemetry.right.duty = control.right.duty;
+                telemetry.right.duty = control.angular.duty;
                 RIGHT_telemetry_complete = true;
                 // DEBUG_PRINTLN("RIGHT TELEMETRY");
             }

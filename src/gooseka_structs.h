@@ -32,8 +32,8 @@ typedef struct __attribute__((packed)) {
 } ESC_oneside_control_t;
 
 typedef struct __attribute__((packed)) {
-    ESC_oneside_control_t left;
-    ESC_oneside_control_t right;
+    ESC_oneside_control_t linear;
+    ESC_oneside_control_t angular;
     uint8_t magic_number;
 } ESC_control_t;
 
