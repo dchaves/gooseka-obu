@@ -11,6 +11,10 @@
 #define KP_ANGULAR .05 // FIXME: bulebule specs
 #define KD_ANGULAR 1. // FIXME: bulebule specs
 
+#define MAX_ANGULAR_VELOCITY 20 # x radsps
+#define ZERO_ANGULAR_DUTY 128
+#define SCALE_ANGULAR_DUTY 0.0078125 * MAX_ANGULAR_VELOCITY
+
 struct control_constants {
   float kp_linear;
   float kd_linear;
@@ -26,6 +30,7 @@ struct control_constants get_control_constants(void);
 void reset_angular_control(void);
 float get_angular_control(float angular_target_velocity,
                      float angular_meas_velocity);
+float translate_angular_velocity(uint8_t angular_duty);
 
 #endif /* GOOSEKA_CONTROL_H */
 

@@ -17,6 +17,18 @@ struct control_constants get_control_constants(void)
 
 
 /*
+  @brief transform angular duty to angular velocity
+ */
+float translate_angular_velocity(uint8_t angular_duty)
+{
+  float angular_velocity = 0.0;
+
+  angular_velocity = (angular_duty - ZERO_ANGULAR_DUTY) * SCALE_ANGULAR_DUTY;
+
+  return angular_duty;
+}
+
+/*
   @brief transform voltage to pwm duty
 
  */
