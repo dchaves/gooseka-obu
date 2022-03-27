@@ -11,7 +11,7 @@
 #define KP_ANGULAR .05 // FIXME: bulebule specs
 #define KD_ANGULAR 1. // FIXME: bulebule specs
 
-#define MAX_ANGULAR_VELOCITY 20 # x radsps
+#define MAX_ANGULAR_VELOCITY 20 // x radsps
 #define ZERO_ANGULAR_DUTY 128
 #define SCALE_ANGULAR_DUTY 0.0078125 * MAX_ANGULAR_VELOCITY
 
