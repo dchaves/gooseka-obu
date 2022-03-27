@@ -130,7 +130,7 @@ void radio_receive_task(void* param) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
             control.linear.duty = 0;
-            control.angular.duty = 128; # 128 is translated to 0 radsps
+            control.angular.duty = 128; // 128 is translated to 0 radsps
         }
 
         // TODO (linear error is not calculated yet
