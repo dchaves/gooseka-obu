@@ -3,8 +3,6 @@
 #include <ESP32Servo.h>
 #include <SPI.h>
 #include <LoRa.h>
-
-
 #include "gooseka_helpers.h"
 #include "gooseka_structs.h"
 #include "gooseka_defs.h"
@@ -90,17 +88,14 @@ void radio_receive_task(void* param) {
     uint32_t last_sent_millis;
     uint32_t last_angular_update_millis;
     ESC_telemetry_t telemetry;
-    //TODO: Should add the linear control in the future
-    MPU_angular_control_t angular_control_msg;
     
-    float angular_control_left = 0.0;
-    float angular_control_right = 0.0;
+    float control_target_left = 0.0;
+    float control_target_right = 0.0;
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
 
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
-    memset(&angular_control_msg,0,sizeof(MPU_angular_control_t));
 
     last_sent_millis = millis();
     last_received_millis = 0;
@@ -133,29 +128,6 @@ void radio_receive_task(void* param) {
             control.angular.duty = 128; // 128 is translated to 0 radsps
         }
 
-        // TODO (linear error is not calculated yet
-        // Linear voltage should be a function of the linear error (not calculated yet)
-        float linear_target = control.linear.duty;
-        float angular_target = translate_angular_velocity(control.angular.duty);
-        
-        float angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
-        
-        if (linear_target > 0) {        
-          angular_control_left = linear_target + (control.angular.duty - 128); // TODO CHANGE TO PID VALUE
-          angular_control_right = linear_target - (control.angular.duty - 128); // TODO CHANGE TO PID VALUE
-          
-
-          pwm_left = constrain(angular_control_left,0,255);
-          pwm_right = constrain(angular_control_right,0,255);  
-        }
-        else {
-            pwm_left = 0;
-            pwm_right = 0;
-        }        
-        
-        LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
-        RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
-
         if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
             // Send enqueued msgs
             last_sent_millis = millis();
@@ -163,7 +135,37 @@ void radio_receive_task(void* param) {
             send_via_radio((uint8_t *)&telemetry, sizeof(ESC_telemetry_t));
             //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
             DEBUG_TELEMETRY(&Serial, &telemetry);
+        } else {
+            xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
         }
+
+        // TODO (linear error is not calculated yet)
+        // Linear voltage should be a function of the linear error (not calculated yet)
+        uint8_t linear_target = control.linear.duty;
+        int8_t angular_target = control.angular.duty - 128;
+
+        int16_t erpm_diff = telemetry.left.erpm - telemetry.right.erpm;
+        uint16_t erpm_max = max(telemetry.left.erpm, telemetry.right.erpm);
+
+        if(erpm_max != 0) {
+            int8_t measured_angular_duty = map(erpm_diff, -erpm_max, erpm_max, INT8_MIN, INT8_MAX);
+            int8_t angular_duty_error = angular_target - measured_angular_duty;
+
+            float angular_duty_corrected = angular_target + (KP_ANGULAR * angular_duty_error);
+            
+            control_target_left = linear_target + angular_duty_corrected; 
+            control_target_right = linear_target - angular_duty_corrected;
+            
+            pwm_left = constrain(control_target_left,0,255);  
+            pwm_right = constrain(control_target_right,0,255);
+        } else { // NOT MOVING => ANGULAR VELOCITY == 0
+            pwm_left = linear_target;
+            pwm_right = linear_target;
+        }
+
+        LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
+        RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
+
         vTaskDelay(1); // Without this line watchdog resets the board
     }
     vTaskDelete(NULL);
