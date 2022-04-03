@@ -145,16 +145,13 @@ void radio_receive_task(void* param) {
           angular_control_right = linear_target - angular_control_pid;
           
 
-          pwm_left = voltage_to_motor_pwm(angular_control_left, 0, 255);
-          pwm_right = voltage_to_motor_pwm(angular_control_right, 0, 255);
-
-          
+          pwm_left = angular_control_left;
+          pwm_right = angular_control_right;  
         }
-        else
-          {
+        else {
             pwm_left = 0;
             pwm_right = 0;
-          }        
+        }        
         
         LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
         RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
@@ -213,7 +210,7 @@ void ESC_control_task(void* param) {
         if(LEFT_ESC_serial.available()) {
             // DEBUG_PRINTLN("LEFT AVAILABLE");
             if(read_telemetry(&LEFT_ESC_serial, &LEFT_serial_buffer, &(telemetry.left))) {
-                telemetry.left.duty = control.linear.duty;
+                telemetry.left.duty = control.linear.duty + (control.angular.duty - 128);
                 LEFT_telemetry_complete = true;
                 // DEBUG_PRINTLN("LEFT TELEMETRY");
             }
@@ -222,7 +219,7 @@ void ESC_control_task(void* param) {
         if(RIGHT_ESC_serial.available()) {
             // DEBUG_PRINTLN("RIGHT AVAILABLE");
             if(read_telemetry(&RIGHT_ESC_serial, &RIGHT_serial_buffer, &(telemetry.right))) {
-                telemetry.right.duty = control.angular.duty;
+                telemetry.right.duty = control.linear.duty - (control.angular.duty - 128) ;
                 RIGHT_telemetry_complete = true;
                 // DEBUG_PRINTLN("RIGHT TELEMETRY");
             }
