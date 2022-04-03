@@ -21,11 +21,9 @@ struct control_constants get_control_constants(void)
  */
 float translate_angular_velocity(uint8_t angular_duty)
 {
-  float angular_velocity = 0.0;
+  float angular_velocity = (angular_duty - ZERO_ANGULAR_DUTY) * SCALE_ANGULAR_DUTY;
 
-  angular_velocity = (angular_duty - ZERO_ANGULAR_DUTY) * SCALE_ANGULAR_DUTY;
-
-  return angular_duty;
+  return angular_velocity;
 }
 
 /*
