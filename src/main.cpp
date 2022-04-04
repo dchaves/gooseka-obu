@@ -160,12 +160,12 @@ void radio_receive_task(void* param) {
         }
                
         if (linear_target > 0) {        
-          angular_control_left = linear_target + angular_control_pid; 
-          angular_control_right = linear_target - angular_control_pid; 
+          control_target_left = linear_target + angular_control_pid; 
+          control_target_right = linear_target - angular_control_pid; 
           
 
-          pwm_left = constrain(angular_control_left,0,255);
-          pwm_right = constrain(angular_control_right,0,255);  
+          pwm_left = constrain(control_target_left,0,255);
+          pwm_right = constrain(control_target_right,0,255);  
         }
         else {
             pwm_left = 0;
