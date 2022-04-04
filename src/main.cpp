@@ -137,12 +137,19 @@ void radio_receive_task(void* param) {
         // Linear voltage should be a function of the linear error (not calculated yet)
         float linear_target = control.linear.duty;
         float angular_target = translate_angular_velocity(control.angular.duty);
+
+        // Apply angular control only if erpm is highter than a certain value
+        float angular_control_pid = 0;
         
-        float angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
-        
+        if (((telemetry.left.erpm + telemetry.right.erpm)/2) > MIN_RPM_START) {
+              
+          angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
+
+        }
+               
         if (linear_target > 0) {        
-          angular_control_left = linear_target + (control.angular.duty - 128); // TODO CHANGE TO PID VALUE
-          angular_control_right = linear_target - (control.angular.duty - 128); // TODO CHANGE TO PID VALUE
+          angular_control_left = linear_target + (control.angular.duty - 128); // TODO CHANGE TO PID VALUE (angular_control_pid)
+          angular_control_right = linear_target - (control.angular.duty - 128); // TODO CHANGE TO PID VALUE (angular_control_pid)
           
 
           pwm_left = constrain(angular_control_left,0,255);
