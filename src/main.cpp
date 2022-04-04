@@ -3,8 +3,6 @@
 #include <ESP32Servo.h>
 #include <SPI.h>
 #include <LoRa.h>
-
-
 #include "gooseka_helpers.h"
 #include "gooseka_structs.h"
 #include "gooseka_defs.h"
@@ -15,6 +13,7 @@
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
 
+float angular_control = 0.0;
 
 
 void init_radio() {
@@ -63,7 +62,8 @@ uint32_t time_since(uint32_t reference_time) {
 float update_angular_control(uint32_t* last_update_millis, float target_angular_vel) {
     // Do this once every GYRO_UPDATE_TIME ms
     if (time_since(*last_update_millis) < GYRO_UPDATE_TIME) {
-        return 0.0; // TODO check if it is better to return last value or 0
+      // return last value
+        return angular_control; 
     }
     *last_update_millis = millis();
     update_gyro_readings();
@@ -72,7 +72,7 @@ float update_angular_control(uint32_t* last_update_millis, float target_angular_
 
     // Measure angular velocity
     float meas_angular_vel = get_gyro_z_radps();
-    float angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
+    angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
 
     return angular_control;
 }
@@ -90,17 +90,14 @@ void radio_receive_task(void* param) {
     uint32_t last_sent_millis;
     uint32_t last_angular_update_millis;
     ESC_telemetry_t telemetry;
-    //TODO: Should add the linear control in the future
-    MPU_angular_control_t angular_control_msg;
     
-    float angular_control_left = 0.0;
-    float angular_control_right = 0.0;
+    float control_target_left = 0.0;
+    float control_target_right = 0.0;
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
 
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
-    memset(&angular_control_msg,0,sizeof(MPU_angular_control_t));
 
     last_sent_millis = millis();
     last_received_millis = 0;
@@ -133,23 +130,38 @@ void radio_receive_task(void* param) {
             control.angular.duty = 128; // 128 is translated to 0 radsps
         }
 
+
+        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
+            // Send enqueued msgs
+            last_sent_millis = millis();
+            xQueueReceive(telemetry_queue, &telemetry, 0);
+            send_via_radio((uint8_t *)&telemetry, sizeof(ESC_telemetry_t));
+            //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+            DEBUG_TELEMETRY(&Serial, &telemetry);
+        } else {
+            xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
+        }
+
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
         float linear_target = control.linear.duty;
+
+        // We scale to a maximum allowed angular velocity
         float angular_target = translate_angular_velocity(control.angular.duty);
 
         // Apply angular control only if erpm is highter than a certain value
-        float angular_control_pid = 0;
+        float angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
+
+        // Calculate always because the PID needs to be updated at concrete intervals !! but apply only if certain erpms are achieved
         
-        if (((telemetry.left.erpm + telemetry.right.erpm)/2) > MIN_RPM_START) {
-              
-          angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
+        if (((telemetry.left.erpm + telemetry.right.erpm)/2) < MIN_RPM_START) {
+          angular_control_pid = 0;
 
         }
                
         if (linear_target > 0) {        
-          angular_control_left = linear_target + (control.angular.duty - 128); // TODO CHANGE TO PID VALUE (angular_control_pid)
-          angular_control_right = linear_target - (control.angular.duty - 128); // TODO CHANGE TO PID VALUE (angular_control_pid)
+          angular_control_left = linear_target + angular_control_pid; 
+          angular_control_right = linear_target - angular_control_pid; 
           
 
           pwm_left = constrain(angular_control_left,0,255);
@@ -163,14 +175,7 @@ void radio_receive_task(void* param) {
         LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
         RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
 
-        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
-            // Send enqueued msgs
-            last_sent_millis = millis();
-            xQueueReceive(telemetry_queue, &telemetry, 0);
-            send_via_radio((uint8_t *)&telemetry, sizeof(ESC_telemetry_t));
-            //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-            DEBUG_TELEMETRY(&Serial, &telemetry);
-        }
+
         vTaskDelay(1); // Without this line watchdog resets the board
     }
     vTaskDelete(NULL);
