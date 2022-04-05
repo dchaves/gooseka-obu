@@ -45,7 +45,7 @@
 #define LORA_TX_POWER 20
 
 // Minimum eRPM to consider that the car is running
-#define MIN_RPM_START 10
+#define MIN_RPM_START 3
 
 // LORA SYNCWORD
 #define LORA_SYNCWORD 0xCA

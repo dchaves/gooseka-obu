@@ -13,7 +13,7 @@
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
 
-float angular_control = 0.0;
+
 
 
 void init_radio() {
@@ -60,19 +60,14 @@ uint32_t time_since(uint32_t reference_time) {
 }
 
 float update_angular_control(uint32_t* last_update_millis, float target_angular_vel) {
-    // Do this once every GYRO_UPDATE_TIME ms
-    if (time_since(*last_update_millis) < GYRO_UPDATE_TIME) {
-      // return last value
-        return angular_control; 
-    }
-    *last_update_millis = millis();
+
     update_gyro_readings();
     DEBUG_PRINT("DPS: ");
     DEBUG_PRINTLN(get_gyro_z_dps());
 
     // Measure angular velocity
     float meas_angular_vel = get_gyro_z_radps();
-    angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
+    float angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
 
     return angular_control;
 }
@@ -95,9 +90,11 @@ void radio_receive_task(void* param) {
     float control_target_right = 0.0;
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
-
+    float angular_control_pid = 0.0;
+    
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
+
 
     last_sent_millis = millis();
     last_received_millis = 0;
@@ -152,7 +149,11 @@ void radio_receive_task(void* param) {
         float angular_target = translate_angular_velocity(control.angular.duty);
 
         // Apply angular control only if erpm is highter than a certain value
-        float angular_control_pid = update_angular_control(&last_angular_update_millis, angular_target);
+
+        if (time_since(last_angular_update_millis) > GYRO_UPDATE_TIME) {
+          angular_control_pid = update_angular_control(angular_target);
+          last_angular_update_millis = millis();
+        }
 
         // Calculate always because the PID needs to be updated at concrete intervals !! but apply only if certain erpms are achieved
         
