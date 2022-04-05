@@ -59,7 +59,7 @@ uint32_t time_since(uint32_t reference_time) {
     return millis() - reference_time;
 }
 
-float update_angular_control(uint32_t* last_update_millis, float target_angular_vel) {
+float update_angular_control(float target_angular_vel) {
 
     update_gyro_readings();
     DEBUG_PRINT("DPS: ");
@@ -159,7 +159,6 @@ void radio_receive_task(void* param) {
         
         if (((telemetry.left.erpm + telemetry.right.erpm)/2) < MIN_RPM_START) {
           angular_control_pid = 0;
-
         }
                
         if (linear_target > 0) {        
