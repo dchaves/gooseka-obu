@@ -114,6 +114,8 @@ void radio_receive_task(void* param) {
             memcpy(&control, radio_buffer, sizeof(ESC_control_t));
             last_received_millis = millis();
             if(control.magic_number == MAGIC_NUMBER) {
+              // Can we send the radps to telemetry here?
+              
                 xQueueSend(control_queue, &control, 0);
                 
                 DEBUG_PRINT("Received commands: ");
@@ -164,8 +166,8 @@ void radio_receive_task(void* param) {
           control_target_right = linear_target - angular_control_pid; 
           
 
-          pwm_left = constrain(control_target_left,0,255);
-          pwm_right = constrain(control_target_right,0,255);  
+          pwm_left = (uint8_t) constrain(control_target_left,0.0,255.0);
+          pwm_right = (uint8_t) constrain(control_target_right,0.0,255.0);  
         }
         else {
             pwm_left = 0;
