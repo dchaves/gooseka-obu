@@ -84,7 +84,7 @@ void radio_receive_task(void* param) {
     Servo RIGHT_ESC_servo;
     uint32_t last_sent_millis;
     uint32_t last_angular_update_millis;
-    ESC_telemetry_t telemetry;
+    ESC_telemetry_t telemetry, telemetry_controller;
     
     float control_target_left = 0.0;
     float control_target_right = 0.0;
@@ -93,6 +93,7 @@ void radio_receive_task(void* param) {
     float angular_control_pid = 0.0;
     
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
+    memset(&telemetry_controller,0, sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
 
 
@@ -130,17 +131,9 @@ void radio_receive_task(void* param) {
         }
 
 
-        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
-            // Send enqueued msgs
-            last_sent_millis = millis();
-            xQueueReceive(telemetry_queue, &telemetry, 0);
-            send_via_radio((uint8_t *)&telemetry, sizeof(ESC_telemetry_t));
-            //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-            DEBUG_TELEMETRY(&Serial, &telemetry);
-        } else {
-            xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
-        }
-
+        // Read Telemetry packet
+        xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
+        
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
         float linear_target = control.linear.duty;
@@ -177,6 +170,35 @@ void radio_receive_task(void* param) {
         LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
         RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
 
+
+        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
+            // Send enqueued msgs
+            last_sent_millis = millis();
+
+            memcpy(&telemetry_controller, &telemetry, sizeof(ESC_telemetry_t));            
+
+            // Modify telemetry that is send to the controller
+            // Send duty
+            telemetry_controller.left.duty = pwm_left;
+            telemetry_controller.right.duty = pwm_right;
+
+            // Send angular velocity in temperature
+            float meas_angular_vel = get_gyro_z_radps();
+
+            if (meas_angular_vel > 0) {
+
+              telemetry_controller.left.temperature = (uint16_t) meas_angular_vel * 100;
+              telemetry_controller.right.temperature = 0;
+            }
+            else {
+              telemetry_controller.left.temperature = 0;
+              telemetry_controller.right.temperature = (uint16_t) (meas_angular_vel * -100);
+            }
+            
+            send_via_radio((uint8_t *)&telemetry_controller, sizeof(ESC_telemetry_t));
+            //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+            DEBUG_TELEMETRY(&Serial, &telemetry_controller);
+        }
 
         vTaskDelay(1); // Without this line watchdog resets the board
     }

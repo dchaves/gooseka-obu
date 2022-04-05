@@ -1,7 +1,7 @@
 #include "gooseka_control.h"
 
-static volatile float angular_error;
-static volatile float last_angular_error;
+static volatile float angular_error = 0.0;
+static volatile float last_angular_error = 0.0;
 
 static struct control_constants control = {
                                            .kp_linear = KP_LINEAR,
@@ -62,8 +62,8 @@ float get_angular_control(float angular_target_velocity,
 
    control = get_control_constants();
 
-   angular_control =  control.kp_angular * angular_error +
-     control.kd_angular * (angular_error - last_angular_error);
+   angular_control =  (control.kp_angular * angular_error) +
+     (control.kd_angular * (angular_error - last_angular_error));
 
    return angular_control;
    
