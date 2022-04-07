@@ -155,7 +155,7 @@ void radio_receive_task(void* param) {
         }
                
         if (linear_target > 0) {
-          float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid) 
+          float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid); 
           control_target_left = linear_target + angular_pid_duty; 
           control_target_right = linear_target - angular_pid_duty; 
           

@@ -32,7 +32,7 @@ float translate_duty_to_angular_velocity(uint8_t angular_duty)
 */
 float  translate_angular_error_to_duty(float angular_control)
 {
-  float angular_duty = (angular_control/(MAX_ANGULAR_VELOCITY * 2) * DRIVER_PWM_PERIOD;
+  float angular_duty = (angular_control/(MAX_ANGULAR_VELOCITY * 2)) * DRIVER_PWM_PERIOD;
 
   return angular_duty;
 }
