@@ -139,7 +139,7 @@ void radio_receive_task(void* param) {
         float linear_target = control.linear.duty;
 
         // We scale to a maximum allowed angular velocity
-        float angular_target = translate_angular_velocity(control.angular.duty);
+        float angular_target = translate_duty_to_angular_velocity(control.angular.duty);
 
         // Apply angular control only if erpm is highter than a certain value
 
@@ -154,9 +154,10 @@ void radio_receive_task(void* param) {
           angular_control_pid = 0;
         }
                
-        if (linear_target > 0) {        
-          control_target_left = linear_target + angular_control_pid; 
-          control_target_right = linear_target - angular_control_pid; 
+        if (linear_target > 0) {
+          float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid) 
+          control_target_left = linear_target + angular_pid_duty; 
+          control_target_right = linear_target - angular_pid_duty; 
           
 
           pwm_left = (uint8_t) constrain(control_target_left,0.0,255.0);
