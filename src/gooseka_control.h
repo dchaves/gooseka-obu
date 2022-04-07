@@ -33,7 +33,6 @@ float get_angular_control(float angular_target_velocity,
                      float angular_meas_velocity);
 float translate_duty_to_angular_velocity(uint8_t angular_duty);
 float translate_angular_error_to_duty(float angular_control); 
-(float angular_control);
 
 #endif /* GOOSEKA_CONTROL_H */
 
