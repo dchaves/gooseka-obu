@@ -3,13 +3,18 @@
 #include <ESP32Servo.h>
 #include <SPI.h>
 #include <LoRa.h>
-
 #include "gooseka_helpers.h"
 #include "gooseka_structs.h"
 #include "gooseka_defs.h"
+#include "gooseka_mpu.h"
+#include "gooseka_control.h"
+
 
 QueueHandle_t control_queue;
 QueueHandle_t telemetry_queue;
+
+
+
 
 void init_radio() {
     // Set SPI LoRa pins
@@ -50,6 +55,23 @@ int receive_radio_packet(uint8_t* buffer, int size) {
     return packetSize;
 }
 
+uint32_t time_since(uint32_t reference_time) {
+    return millis() - reference_time;
+}
+
+float update_angular_control(float target_angular_vel) {
+
+    update_gyro_readings();
+    DEBUG_PRINT("DPS: ");
+    DEBUG_PRINTLN(get_gyro_z_dps());
+
+    // Measure angular velocity
+    float meas_angular_vel = get_gyro_z_radps();
+    float angular_control = get_angular_control(target_angular_vel, meas_angular_vel);
+
+    return angular_control;
+}
+
 // CPU #1
 // 0. Read incoming message
 // 1. Set LEFT & RIGHT ESC duty cycle
@@ -61,12 +83,23 @@ void radio_receive_task(void* param) {
     Servo LEFT_ESC_servo;
     Servo RIGHT_ESC_servo;
     uint32_t last_sent_millis;
-    ESC_telemetry_t telemetry;
-
+    uint32_t last_angular_update_millis;
+    ESC_telemetry_t telemetry, telemetry_controller;
+    
+    float control_target_left = 0.0;
+    float control_target_right = 0.0;
+    uint8_t pwm_left = 0;
+    uint8_t pwm_right = 0;
+    float angular_control_pid = 0.0;
+    
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
+    memset(&telemetry_controller,0, sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
+
+
     last_sent_millis = millis();
     last_received_millis = 0;
+    last_angular_update_millis = 0;
     
     // Configure servos
     LEFT_ESC_servo.attach(LEFT_PWM_PIN, PWM_MIN, PWM_MAX);
@@ -79,33 +112,95 @@ void radio_receive_task(void* param) {
             memcpy(&control, radio_buffer, sizeof(ESC_control_t));
             last_received_millis = millis();
             if(control.magic_number == MAGIC_NUMBER) {
+              // Can we send the radps to telemetry here?
+              
                 xQueueSend(control_queue, &control, 0);
                 
                 DEBUG_PRINT("Received commands: ");
-                DEBUG_PRINT(control.left.duty);
+                DEBUG_PRINT(control.linear.duty);
                 DEBUG_PRINT(",");
-                DEBUG_PRINT(control.right.duty);
+                DEBUG_PRINT(control.angular.duty);
                 DEBUG_PRINT(",");
                 DEBUG_PRINTLN(LoRa.packetRssi());
             }
-        } else if(millis() - last_received_millis > RADIO_IDLE_TIMEOUT) {
+        } else if(time_since(last_received_millis) > RADIO_IDLE_TIMEOUT) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
-            control.left.duty = 0;
-            control.right.duty = 0;
+            control.linear.duty = 0;
+            control.angular.duty = 128; // 128 is translated to 0 radsps
         }
-        
-        LEFT_ESC_servo.write(map(control.left.duty,0,255,0,180));
-        RIGHT_ESC_servo.write(map(control.right.duty,0,255,0,180));
 
-        if(millis() - last_sent_millis > LORA_SLOWDOWN) {
+
+        // Read Telemetry packet
+        xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
+        
+        // TODO (linear error is not calculated yet
+        // Linear voltage should be a function of the linear error (not calculated yet)
+        float linear_target = control.linear.duty;
+
+        // We scale to a maximum allowed angular velocity
+        float angular_target = translate_duty_to_angular_velocity(control.angular.duty);
+
+        // Apply angular control only if erpm is highter than a certain value
+
+        if (time_since(last_angular_update_millis) > GYRO_UPDATE_TIME) {
+          angular_control_pid = update_angular_control(angular_target);
+          last_angular_update_millis = millis();
+        }
+
+        // Calculate always because the PID needs to be updated at concrete intervals !! but apply only if certain erpms are achieved
+        
+        if (((telemetry.left.erpm + telemetry.right.erpm)/2) < MIN_RPM_START) {
+          angular_control_pid = 0;
+        }
+               
+        if (linear_target > 0) {
+          float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid); 
+          control_target_left = linear_target + angular_pid_duty; 
+          control_target_right = linear_target - angular_pid_duty; 
+          
+
+          pwm_left = (uint8_t) constrain(control_target_left,0.0,255.0);
+          pwm_right = (uint8_t) constrain(control_target_right,0.0,255.0);  
+        }
+        else {
+            pwm_left = 0;
+            pwm_right = 0;
+        }        
+        
+        LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
+        RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
+
+
+        if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
             // Send enqueued msgs
             last_sent_millis = millis();
-            xQueueReceive(telemetry_queue, &telemetry, 0);
-            send_via_radio((uint8_t *)&telemetry, sizeof(ESC_telemetry_t));
+
+            memcpy(&telemetry_controller, &telemetry, sizeof(ESC_telemetry_t));            
+
+            // Modify telemetry that is send to the controller
+            // Send duty
+            telemetry_controller.left.duty = pwm_left;
+            telemetry_controller.right.duty = pwm_right;
+
+            // Send angular velocity in temperature
+            float meas_angular_vel = get_gyro_z_radps();
+
+            if (meas_angular_vel > 0) {
+
+              telemetry_controller.left.temperature = (uint16_t) meas_angular_vel * 100;
+              telemetry_controller.right.temperature = 0;
+            }
+            else {
+              telemetry_controller.left.temperature = 0;
+              telemetry_controller.right.temperature = (uint16_t) (meas_angular_vel * -100);
+            }
+            
+            send_via_radio((uint8_t *)&telemetry_controller, sizeof(ESC_telemetry_t));
             //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-            DEBUG_TELEMETRY(&Serial, &telemetry);
+            DEBUG_TELEMETRY(&Serial, &telemetry_controller);
         }
+
         vTaskDelay(1); // Without this line watchdog resets the board
     }
     vTaskDelete(NULL);
@@ -125,7 +220,7 @@ void ESC_control_task(void* param) {
     bool RIGHT_telemetry_complete;
     HardwareSerial LEFT_ESC_serial(1);
     HardwareSerial RIGHT_ESC_serial(2);
-
+    
     // Initialize structs and arrays
     LEFT_telemetry_complete = false;
     RIGHT_telemetry_complete = false;
@@ -152,7 +247,7 @@ void ESC_control_task(void* param) {
         if(LEFT_ESC_serial.available()) {
             // DEBUG_PRINTLN("LEFT AVAILABLE");
             if(read_telemetry(&LEFT_ESC_serial, &LEFT_serial_buffer, &(telemetry.left))) {
-                telemetry.left.duty = control.left.duty;
+                telemetry.left.duty = control.linear.duty;
                 LEFT_telemetry_complete = true;
                 // DEBUG_PRINTLN("LEFT TELEMETRY");
             }
@@ -161,7 +256,7 @@ void ESC_control_task(void* param) {
         if(RIGHT_ESC_serial.available()) {
             // DEBUG_PRINTLN("RIGHT AVAILABLE");
             if(read_telemetry(&RIGHT_ESC_serial, &RIGHT_serial_buffer, &(telemetry.right))) {
-                telemetry.right.duty = control.right.duty;
+                telemetry.right.duty = control.angular.duty;
                 RIGHT_telemetry_complete = true;
                 // DEBUG_PRINTLN("RIGHT TELEMETRY");
             }
@@ -186,6 +281,9 @@ void setup() {
 
     // Init radio interface
     init_radio();
+
+    // Setup MPU
+    setup_mpu();
 
     // Init control msg queue
     control_queue = xQueueCreate(QUEUE_SIZE, sizeof(ESC_control_t));

@@ -15,6 +15,9 @@
 #define RIGHT_TELEMETRY_UNUSED_PIN 13
 #define RIGHT_TELEMETRY_SERIAL_BAUDS 115200
 
+// GYRO UPDATE TIME
+#define GYRO_UPDATE_TIME 20
+
 // ESC PWM CONFIGURATION
 #define PWM_MIN 1040
 #define PWM_MAX 1960
@@ -40,6 +43,9 @@
 #define LORA_CODING_RATE 5
 #define LORA_PREAMBLE_LENGTH 8
 #define LORA_TX_POWER 20
+
+// Minimum eRPM to consider that the car is running
+#define MIN_RPM_START 3
 
 // LORA SYNCWORD
 #define LORA_SYNCWORD 0xCA
