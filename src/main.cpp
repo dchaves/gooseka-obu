@@ -84,6 +84,8 @@ void radio_receive_task(void* param) {
     Servo RIGHT_ESC_servo;
     uint32_t last_sent_millis;
     uint32_t last_angular_update_millis;
+    // variable to store last angular duty and resets pid error if a new angular duty arrives
+    uint8_t last_angular_duty = 0;
     ESC_telemetry_t telemetry, telemetry_controller;
     
     float control_target_left = 0.0;
@@ -112,9 +114,7 @@ void radio_receive_task(void* param) {
             memcpy(&control, radio_buffer, sizeof(ESC_control_t));
             last_received_millis = millis();
             if(control.magic_number == MAGIC_NUMBER) {
-              // Can we send the radps to telemetry here?
-              
-                xQueueSend(control_queue, &control, 0);
+              xQueueSend(control_queue, &control, 0);
                 
                 DEBUG_PRINT("Received commands: ");
                 DEBUG_PRINT(control.linear.duty);
@@ -133,6 +133,15 @@ void radio_receive_task(void* param) {
 
         // Read Telemetry packet
         xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
+
+        // Resetting angular pid if a different order arrives
+        if (last_angular_duty  != control.angular.duty)
+          {
+
+            reset_angular_control();
+            last_angular_duty = control.angular.duty;
+
+          }
         
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
