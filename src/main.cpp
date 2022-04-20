@@ -177,7 +177,8 @@ void radio_receive_task(void* param) {
 
             // Increased the velocity in the period
             if (linear_value >= last_linear_value) {
-
+              // storing last linear value before modifying linear value
+              last_linear_value = linear_value;
 
               // MPPT has increased in the period
               if (linear_mppt >= last_linear_mppt) {
@@ -189,6 +190,10 @@ void radio_receive_task(void* param) {
             }
             // Decreased the velocity in the period
             else {
+
+              // storing last linear value before modifying linear value
+              last_linear_value = linear_value;
+              
               // MPPT has increased in the period
               if (linear_mppt >= last_linear_mppt) {
                 linear_value -= LINEAR_MPPT_STEP;
@@ -197,18 +202,9 @@ void radio_receive_task(void* param) {
                 linear_value += LINEAR_MPPT_STEP;
               }
             }
-              
-            last_linear_value = linear_value;
-
-            // Check limits (use constrain? between 0 and linear_target)
-            if (linear_value > linear_target) {
-              linear_value = linear_target;
-            }
-
-            if (linear_value < 0) {
-              linear_value = 0.0;
-            }
-              
+            
+            linear_value = constrain(linear_value, 0.0, linear_target);
+                          
           }
           else
           {
