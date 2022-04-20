@@ -93,6 +93,17 @@ void radio_receive_task(void* param) {
     uint8_t pwm_left = 0;
     uint8_t pwm_right = 0;
     float angular_control_pid = 0.0;
+
+    uint32_t last_mppt_update_millis = 0;
+    uint32_t last_linear_update_millis = 0;
+    uint32_t mppt_samples[10];
+    uint8_t mppt_idx = 0;
+    uint32_t last_linear_mppt = 0;
+    uint32_t linear_mppt = 0;
+    float last_mppt_value = 0.0;
+    float linear_value = 0.0;
+    float last_linear_value = 0.0;
+    
     
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&telemetry_controller,0, sizeof(ESC_telemetry_t));
@@ -134,19 +145,80 @@ void radio_receive_task(void* param) {
         // Read Telemetry packet
         xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
 
+        // Check mppt meas (current)
+        if (time_since(last_mppt_update_millis) > MS_MPPT_MEAS) {
+          mppt_samples[mppt_idx] = telemetry.left.current + telemetry.right.current;
+          mppt_idx++;
+          mppt_idx = mppt_idx % NUM_SAMPLES_MPPT;
+          last_mppt_update_millis = millis();
+        }
+        
         // Resetting angular pid if a different order arrives
         if (last_angular_duty  != control.angular.duty)
           {
-
             reset_angular_control();
             last_angular_duty = control.angular.duty;
-
           }
         
         // TODO (linear error is not calculated yet
         // Linear voltage should be a function of the linear error (not calculated yet)
         float linear_target = control.linear.duty;
 
+        if (time_since(last_linear_update_millis) > MS_LINEAR_CONTROL) {
+          last_linear_mppt = linear_mppt;
+          linear_mppt = 0;
+          
+          for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
+            linear_mppt = mppt_samples[i];
+          }
+
+          // Apply control only with a minimum velocity
+          if (linear_target > LINEAR_MPPT_MIN) {
+
+            // Increased the velocity in the period
+            if (linear_value >= last_linear_value) {
+
+
+              // MPPT has increased in the period
+              if (linear_mppt >= last_linear_mppt) {
+                linear_value += LINEAR_MPPT_STEP;
+              }
+              else {
+                linear_value -= LINEAR_MPPT_STEP;
+              }
+            }
+            // Decreased the velocity in the period
+            else {
+              // MPPT has increased in the period
+              if (linear_mppt >= last_linear_mppt) {
+                linear_value -= LINEAR_MPPT_STEP;
+              }
+              else {
+                linear_value += LINEAR_MPPT_STEP;
+              }
+            }
+              
+            last_linear_value = linear_value;
+
+            // Check limits (use constrain? between 0 and linear_target)
+            if (linear_value > linear_target) {
+              linear_value = linear_target;
+            }
+
+            if (linear_value < 0) {
+              linear_value = 0.0;
+            }
+              
+          }
+          else
+          {
+            last_linear_value = linear_value;
+            linear_value = linear_target;
+          }
+          
+          last_linear_update_millis = millis();
+        }
+        
         // We scale to a maximum allowed angular velocity
         float angular_target = translate_duty_to_angular_velocity(control.angular.duty);
 
@@ -165,8 +237,8 @@ void radio_receive_task(void* param) {
                
         if (linear_target > 0) {
           float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid); 
-          control_target_left = linear_target + angular_pid_duty; 
-          control_target_right = linear_target - angular_pid_duty; 
+          control_target_left = linear_value + angular_pid_duty; 
+          control_target_right = linear_value - angular_pid_duty; 
           
 
           pwm_left = (uint8_t) constrain(control_target_left,0.0,255.0);

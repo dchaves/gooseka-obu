@@ -66,4 +66,17 @@
 // MAGIC NUMBER TO CHECK FOR USB ERRORS
 #define MAGIC_NUMBER 0xCA
 
+// Number of samples for MPPT
+#define NUM_SAMPLES_MPPT 10
+
+// Number of ms between lineal pid executions
+#define MS_LINEAR_CONTROL 150L
+
+// Number of ms between MPPT meas
+
+#define MS_MPPT_MEAS 15L
+
+#define LINEAR_MPPT_MIN 50
+#define LINEAR_MPPT_STEP 15
+
 #endif /* GOOSEKA_DEFS_H */
