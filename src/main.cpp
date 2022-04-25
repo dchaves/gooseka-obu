@@ -169,7 +169,7 @@ void radio_receive_task(void* param) {
           linear_mppt = 0;
           
           for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
-            linear_mppt = mppt_samples[i];
+            linear_mppt += mppt_samples[i];
           }
 
           // Apply control only with a minimum velocity
