@@ -96,6 +96,7 @@ void radio_receive_task(void* param) {
 
     uint32_t last_mppt_update_millis = 0;
     uint32_t last_linear_update_millis = 0;
+    uint32_t time_since_last_stop = 0;
     uint32_t mppt_samples[10];
     uint8_t mppt_idx = 0;
     uint32_t last_linear_mppt = 0;
@@ -164,16 +165,16 @@ void radio_receive_task(void* param) {
         // Linear voltage should be a function of the linear error (not calculated yet)
         float linear_target = control.linear.duty;
 
-        if (time_since(last_linear_update_millis) > MS_LINEAR_CONTROL) {
+        if ((time_since(last_linear_update_millis) > MS_LINEAR_CONTROL) && (time_since(time_since_last_stop) > MS_STARTUP_TIME)) {
           last_linear_mppt = linear_mppt;
-          linear_mppt = 0;
           
+          linear_mppt = 0;          
           for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
             linear_mppt += mppt_samples[i];
           }
 
           // Apply control only with a minimum velocity
-          if (linear_target > LINEAR_MPPT_MIN) {
+          if (linear_target > LINEAR_MPPT_THRESHOLD) {
 
             // Increased the velocity in the period
             if (linear_value >= last_linear_value) {
@@ -202,9 +203,13 @@ void radio_receive_task(void* param) {
                 linear_value += LINEAR_MPPT_STEP;
               }
             }
-            
-            linear_value = constrain(linear_value, 0.0, linear_target);
-                          
+
+            if (linear_target > LINEAR_MPPT_MIN) {
+              linear_value = constrain(linear_value, LINEAR_MPPT_MIN, linear_target);
+            }
+            else {
+              linear_value = constrain(linear_value, 0.0, linear_target);
+            }
           }
           else
           {
@@ -243,12 +248,13 @@ void radio_receive_task(void* param) {
         else {
             pwm_left = 0;
             pwm_right = 0;
+            time_since_last_stop = millis();
         }        
         
         LEFT_ESC_servo.write(map(pwm_left,0,255,0,180));
         RIGHT_ESC_servo.write(map(pwm_right,0,255,0,180));
 
-
+        // Send packet 
         if(time_since(last_sent_millis) > LORA_SLOWDOWN) {
             // Send enqueued msgs
             last_sent_millis = millis();
