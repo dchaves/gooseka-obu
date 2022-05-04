@@ -8,8 +8,8 @@
 #define KP_LINEAR 8. // FIXME: bulebule specs
 #define KD_LINEAR 16. // FIXME: bulebule specs
 
-#define KP_ANGULAR .5 // FIXME: bulebule specs
-#define KD_ANGULAR 1. // FIXME: bulebule specs
+#define KP_ANGULAR .05 // FIXME: bulebule specs .5
+#define KD_ANGULAR 0.0 // FIXME: bulebule specs 1.0
 
 #define MAX_ANGULAR_VELOCITY 20 // x radsps
 #define ZERO_ANGULAR_DUTY 128
