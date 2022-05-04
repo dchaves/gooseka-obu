@@ -97,7 +97,8 @@ void radio_receive_task(void* param) {
     uint32_t last_mppt_update_millis = 0;
     uint32_t last_linear_update_millis = 0;
     uint32_t time_since_last_stop = 0;
-    uint32_t mppt_samples[10];
+    uint32_t mppt_samples_current[NUM_SAMPLES_MPPT];
+    uint32_t mppt_samples_voltage[NUM_SAMPLES_MPPT];
     uint8_t mppt_idx = 0;
     uint32_t last_linear_mppt = 0;
     uint32_t linear_mppt = 0;
@@ -146,9 +147,10 @@ void radio_receive_task(void* param) {
         // Read Telemetry packet
         xQueueReceive(telemetry_queue, &telemetry, 0); // EMPTY TELEMETRY QUEUE
 
-        // Check mppt meas (current)
+        // Check mppt meas (current and voltage)
         if (time_since(last_mppt_update_millis) > MS_MPPT_MEAS) {
-          mppt_samples[mppt_idx] = telemetry.left.current + telemetry.right.current;
+          mppt_samples_current[mppt_idx] = telemetry.left.current + telemetry.right.current;
+          mppt_samples_voltage[mppt_idx] = (telemetry.left.voltage + telemetry.right.voltage) >> 1;
           mppt_idx++;
           mppt_idx = mppt_idx % NUM_SAMPLES_MPPT;
           last_mppt_update_millis = millis();
@@ -170,7 +172,7 @@ void radio_receive_task(void* param) {
           
           linear_mppt = 0;          
           for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
-            linear_mppt += mppt_samples[i];
+            linear_mppt += mppt_samples_current[i] * mppt_samples_voltage[i];
           }
 
           // Apply control only with a minimum velocity
