@@ -77,13 +77,15 @@
 #define MS_MPPT_MEAS 15L
 
 // Do not allow MPPT go down this value (unless linear target is lower than this value)
-#define LINEAR_MPPT_MIN 20.0
+#define LINEAR_MPPT_MIN 30.0
 
 // Threshold value in order to apply the mppt
 #define LINEAR_MPPT_THRESHOLD 30
 #define LINEAR_MPPT_STEP 5
 
 // Startup time (during this time MPPT is not applied)
-#define MS_STARTUP_TIME 10000L 
+#define MS_STARTUP_TIME 0L  //10000L 
+
+#define MANUAL_STEERING 1 // Use a value bigger than 0 to use manual steering
 
 #endif /* GOOSEKA_DEFS_H */

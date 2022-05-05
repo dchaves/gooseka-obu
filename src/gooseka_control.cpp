@@ -38,6 +38,17 @@ float  translate_angular_error_to_duty(float angular_control)
 }
 
 
+/*
+  @brief transform angular duty to duty
+*/
+float  translate_manual_control_to_duty(uint8_t angular_duty, float linear_value)
+{
+  float applied_angular_duty = ((float) ((float) angular_duty - ZERO_ANGULAR_DUTY))/ZERO_ANGULAR_DUTY;
+
+  applied_angular_duty *= linear_value;
+  
+  return applied_angular_duty;
+}
 
 
 /*

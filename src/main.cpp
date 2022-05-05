@@ -239,10 +239,17 @@ void radio_receive_task(void* param) {
         }
                
         if (linear_target > 0) {
-          float angular_pid_duty = translate_angular_error_to_duty(angular_control_pid); 
+          float angular_pid_duty = 0.0;
+
+          // Manual control
+          if (MANUAL_STEERING > 0) {
+            angular_pid_duty = translate_manual_control_to_duty(angular_duty, linear_value);
+          }
+          else {
+            angular_pid_duty = translate_angular_error_to_duty(angular_control_pid);
+          }
           control_target_left = linear_value + angular_pid_duty; 
-          control_target_right = linear_value - angular_pid_duty; 
-          
+          control_target_right = linear_value - angular_pid_duty;
 
           pwm_left = (uint8_t) constrain(control_target_left,0.0,255.0);
           pwm_right = (uint8_t) constrain(control_target_right,0.0,255.0);  
