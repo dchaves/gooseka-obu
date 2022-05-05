@@ -243,7 +243,7 @@ void radio_receive_task(void* param) {
 
           // Manual control
           if (MANUAL_STEERING > 0) {
-            angular_pid_duty = translate_manual_control_to_duty(angular_duty, linear_value);
+            angular_pid_duty = translate_manual_control_to_duty(control.angular.duty, linear_value);
           }
           else {
             angular_pid_duty = translate_angular_error_to_duty(angular_control_pid);
