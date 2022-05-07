@@ -11,7 +11,7 @@
 #define KP_ANGULAR .05 // FIXME: bulebule specs .5
 #define KD_ANGULAR 0.0 // FIXME: bulebule specs 1.0
 
-#define MAX_ANGULAR_VELOCITY 20 // x radsps
+#define MAX_ANGULAR_VELOCITY 10 // x radsps
 #define ZERO_ANGULAR_DUTY 128
 #define DRIVER_PWM_PERIOD 255
 #define SCALE_ANGULAR_DUTY 0.0078125 * MAX_ANGULAR_VELOCITY
