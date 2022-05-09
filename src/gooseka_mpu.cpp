@@ -110,7 +110,8 @@ void setup_mpu(void)
 
   // wait 100 ms
   delay(100);
-  
+
+  mpu_write_register(MPU_ADDR, MPU_USER_CTRL, 0x10);
   mpu_write_register(MPU_ADDR, MPU_SMPLRT_DIV, 0x00);
   mpu_write_register(MPU_ADDR, MPU_CONFIG, 0x00);
   mpu_write_register(MPU_ADDR, MPU_GYRO_CONFIG, 0x18);
