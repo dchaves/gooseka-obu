@@ -78,7 +78,7 @@ float update_angular_control(float target_angular_vel) {
 void radio_receive_task(void* param) {
     uint8_t radio_buffer[sizeof(ESC_control_t)];
     // uint8_t index;
-    ESC_control_t control;
+    ESC_control_t control, auxiliar_control;
     uint32_t last_received_millis;
     Servo LEFT_ESC_servo;
     Servo RIGHT_ESC_servo;
@@ -109,6 +109,7 @@ void radio_receive_task(void* param) {
     
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&telemetry_controller,0, sizeof(ESC_telemetry_t));
+    memset(&auxiliar_control, 0, sizeof(ESC_control_t));
     memset(&control,0,sizeof(ESC_control_t));
 
 
@@ -124,18 +125,20 @@ void radio_receive_task(void* param) {
         int packetSize = receive_radio_packet(radio_buffer, sizeof(ESC_control_t));
         // DEBUG_PRINTLN(packetSize);
         if (packetSize == sizeof(ESC_control_t)) {
-            memcpy(&control, radio_buffer, sizeof(ESC_control_t));
+          memcpy(&auxiliar_control, radio_buffer, sizeof(ESC_control_t));
+          if(auxiliar_control.magic_number == MAGIC_NUMBER) {
+            memcpy(&control, &auxiliar_control, sizeof(ESC_control_t));
             last_received_millis = millis();
-            if(control.magic_number == MAGIC_NUMBER) {
-              xQueueSend(control_queue, &control, 0);
+
+            xQueueSend(control_queue, &control, 0);
                 
-                DEBUG_PRINT("Received commands: ");
-                DEBUG_PRINT(control.linear.duty);
-                DEBUG_PRINT(",");
-                DEBUG_PRINT(control.angular.duty);
-                DEBUG_PRINT(",");
-                DEBUG_PRINTLN(LoRa.packetRssi());
-            }
+            DEBUG_PRINT("Received commands: ");
+            DEBUG_PRINT(control.linear.duty);
+            DEBUG_PRINT(",");
+            DEBUG_PRINT(control.angular.duty);
+            DEBUG_PRINT(",");
+            DEBUG_PRINTLN(LoRa.packetRssi());
+          }
         } else if(time_since(last_received_millis) > RADIO_IDLE_TIMEOUT) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
@@ -287,12 +290,16 @@ void radio_receive_task(void* param) {
               telemetry_controller.left.temperature = 0;
               telemetry_controller.right.temperature = (uint16_t) (meas_angular_vel * -1000);
             }
+
+            telemetry_controller.left.power = (uint16_t) control.linear.duty;
+            telemetry_controller.right.power = (uint16_t) control.angular.duty;
             
             send_via_radio((uint8_t *)&telemetry_controller, sizeof(ESC_telemetry_t));
             //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
             DEBUG_TELEMETRY(&Serial, &telemetry_controller);
         }
 
+        // FIXME: maybe increase delay??
         vTaskDelay(1); // Without this line watchdog resets the board
     }
     vTaskDelete(NULL);
