@@ -280,12 +280,12 @@ void radio_receive_task(void* param) {
 
             if (meas_angular_vel > 0) {
 
-              telemetry_controller.left.temperature = (uint16_t) meas_angular_vel * 100;
+              telemetry_controller.left.temperature = (uint16_t) meas_angular_vel * 1000;
               telemetry_controller.right.temperature = 0;
             }
             else {
               telemetry_controller.left.temperature = 0;
-              telemetry_controller.right.temperature = (uint16_t) (meas_angular_vel * -100);
+              telemetry_controller.right.temperature = (uint16_t) (meas_angular_vel * -1000);
             }
             
             send_via_radio((uint8_t *)&telemetry_controller, sizeof(ESC_telemetry_t));
