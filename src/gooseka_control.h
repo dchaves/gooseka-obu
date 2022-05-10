@@ -1,40 +1,29 @@
 #ifndef GOOSEKA_CONTROL_H
 #define GOOSEKA_CONTROL_H
-
-#include <stdint.h>
 #include <Arduino.h>
+#include "gooseka_structs.h"
+#include "gooseka_helpers.h"
 
-/** Control constants */
-#define KP_LINEAR 8. // FIXME: bulebule specs
-#define KD_LINEAR 16. // FIXME: bulebule specs
-
-#define KP_ANGULAR .05 // FIXME: bulebule specs .5
-#define KD_ANGULAR 0.0 // FIXME: bulebule specs 1.0
-
-#define MAX_ANGULAR_VELOCITY 10 // x radsps
+// Number of samples for MPPT
+#define NUM_SAMPLES_MPPT 10
 #define ZERO_ANGULAR_DUTY 128
-#define DRIVER_PWM_PERIOD 255
-#define SCALE_ANGULAR_DUTY 0.0078125 * MAX_ANGULAR_VELOCITY
+// Number of ms between lineal pid executions
+#define MS_LINEAR_CONTROL 150L
+// Number of ms between MPPT meas
+#define MS_MPPT_MEAS 15L
+// Do not allow MPPT go down this value (unless linear target is lower than this value)
+#define LINEAR_MPPT_MIN 30.0
+#define LINEAR_MPPT_STEP 5
 
-struct control_constants {
-  float kp_linear;
-  float kd_linear;
-  float kp_angular;
-  float kd_angular;
-};
+typedef struct __attribute__((packed)) {
+    uint32_t voltage;
+    uint32_t current;
+} sample_t;
 
-
-int32_t voltage_to_motor_pwm(float voltage, int32_t pwm_min, int32_t pwm_max);
-void set_control_constants(struct control_constants value); // Used by mmlib (command) 
-struct control_constants get_control_constants(void);
-
-void reset_angular_control(void);
-float get_angular_control(float angular_target_velocity,
-                     float angular_meas_velocity);
-float translate_duty_to_angular_velocity(uint8_t angular_duty);
-float translate_angular_error_to_duty(float angular_control); 
-float translate_manual_control_to_duty(uint8_t angular_duty, float linear_value);
-
+float angular_to_linear(uint8_t angular_duty, float linear_value);
+void init_mppt();
+void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples);
+uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples);
 
 #endif /* GOOSEKA_CONTROL_H */
 
