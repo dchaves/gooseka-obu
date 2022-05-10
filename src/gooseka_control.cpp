@@ -41,33 +41,31 @@ uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples) {
     for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
       linear_mppt += samples[i].current * samples[i].voltage;
     }
-
-    // storing last linear value before modifying linear value
-    last_linear_value = linear_value;
     
     if (linear_value >= last_linear_value) {   // Increased the velocity in the period
+      last_linear_value = linear_value;        // storing last linear value before modifying linear value
       if (linear_mppt >= last_linear_mppt) {   // MPPT has increased in the period
         linear_value += LINEAR_MPPT_STEP;
-      } else {
+      } else {                                 // MPPT has decreased in the period
         linear_value -= LINEAR_MPPT_STEP;
       }
     } else {                                   // Decreased the velocity in the period
+        last_linear_value = linear_value;      // storing last linear value before modifying linear value
         if (linear_mppt >= last_linear_mppt) { // MPPT has increased in the period
           linear_value -= LINEAR_MPPT_STEP;
-        }
-        else {
+        } else {                               // MPPT has decreased in the period
           linear_value += LINEAR_MPPT_STEP;
         }
     }
 
     if (target_duty > LINEAR_MPPT_MIN) {
-      linear_value = constrain(linear_value, LINEAR_MPPT_MIN, linear_value);
+      linear_value = constrain(linear_value, LINEAR_MPPT_MIN, target_duty);
     }
     else {
-      linear_value = constrain(linear_value, 0.0, linear_value);
+      linear_value = constrain(linear_value, 0.0, target_duty);
     }
     last_linear_update_millis = millis();
   }
   
-  return (uint8_t)(constrain(linear_value, 0.0, 255));
+  return (uint8_t)(constrain(linear_value, 0.0, 255.0));
 }
