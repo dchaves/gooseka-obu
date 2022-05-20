@@ -1,85 +1,71 @@
 #include "gooseka_control.h"
 
-static volatile float angular_error = 0.0;
-static volatile float last_angular_error = 0.0;
+uint32_t last_mppt_update_millis;
+uint32_t last_linear_update_millis;
+float last_linear_value;
+float linear_value;
+uint8_t mppt_idx;
+uint32_t last_linear_mppt;
+uint32_t linear_mppt;
 
-static struct control_constants control = {
-                                           .kp_linear = KP_LINEAR,
-                                           .kd_linear = KD_LINEAR,
-                                           .kp_angular = KP_ANGULAR,
-                                           .kd_angular = KD_ANGULAR};
-
-
-struct control_constants get_control_constants(void)
-{
-  return control;
+float angular_to_linear(uint8_t angular_duty, float linear_value) {
+  float applied_angular_duty = ((float) ((float) angular_duty - ZERO_ANGULAR_DUTY))/ZERO_ANGULAR_DUTY;
+  applied_angular_duty *= linear_value;
+  return applied_angular_duty;
 }
 
-
-/*
-  @brief transform angular duty to angular velocity
- */
-float translate_duty_to_angular_velocity(uint8_t angular_duty)
-{
-  float angular_velocity = (angular_duty - ZERO_ANGULAR_DUTY) * SCALE_ANGULAR_DUTY;
-
-  return angular_velocity;
+void init_mppt() {
+  last_mppt_update_millis = 0;
+  last_linear_update_millis = 0;
+  last_linear_value = 0.0;
+  linear_value = 0;
+  mppt_idx = 0;
+  last_linear_mppt = 0;
+  linear_mppt = 0;
 }
 
-
-/*
-  @brief transform angular error to duty
-*/
-float  translate_angular_error_to_duty(float angular_control)
-{
-  float angular_duty = (angular_control/(MAX_ANGULAR_VELOCITY * 2)) * DRIVER_PWM_PERIOD;
-
-  return angular_duty;
+void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples) {
+  if (time_since(last_mppt_update_millis) > MS_MPPT_MEAS) {
+    samples[mppt_idx].current = telemetry->left.current + telemetry->right.current;
+    samples[mppt_idx].voltage = (telemetry->left.voltage + telemetry->right.voltage) >> 1;
+    mppt_idx++;
+    mppt_idx = mppt_idx % NUM_SAMPLES_MPPT;
+    last_mppt_update_millis = millis();
+  }
 }
 
+uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples) {
+  if (time_since(last_linear_update_millis) > MS_LINEAR_CONTROL) {
+    last_linear_mppt = linear_mppt;
+    linear_mppt = 0;          
+    for (int i = 0; i < NUM_SAMPLES_MPPT; i++) {
+      linear_mppt += samples[i].current * samples[i].voltage;
+    }
+    
+    if (linear_value >= last_linear_value) {   // Increased the velocity in the period
+      last_linear_value = linear_value;        // storing last linear value before modifying linear value
+      if (linear_mppt >= last_linear_mppt) {   // MPPT has increased in the period
+        linear_value += LINEAR_MPPT_STEP;
+      } else {                                 // MPPT has decreased in the period
+        linear_value -= LINEAR_MPPT_STEP;
+      }
+    } else {                                   // Decreased the velocity in the period
+        last_linear_value = linear_value;      // storing last linear value before modifying linear value
+        if (linear_mppt >= last_linear_mppt) { // MPPT has increased in the period
+          linear_value -= LINEAR_MPPT_STEP;
+        } else {                               // MPPT has decreased in the period
+          linear_value += LINEAR_MPPT_STEP;
+        }
+    }
 
-
-
-/*
-  @brief transform voltage to pwm duty
-
- */
-int32_t voltage_to_motor_pwm(float voltage, int32_t pwm_min, int32_t pwm_max)
-{
-  return constrain(voltage * (pwm_max - pwm_min) + pwm_min, pwm_min, pwm_max);
-}
-
-void set_control_constants(struct control_constants value)
-{
-  control = value;
-}
-
-/*
- * @brief reset internal pid control
- */
-void reset_angular_control(void)
-{
-  angular_error = 0.0;
-  last_angular_error = 0.0;
-}
-
-/*
- * @brief update angular contribution to pwm
- */
-float get_angular_control(float angular_target_velocity,
-                     float angular_meas_velocity)
-{
-  float angular_control;
+    if (target_duty > LINEAR_MPPT_MIN) {
+      linear_value = constrain(linear_value, LINEAR_MPPT_MIN, target_duty);
+    }
+    else {
+      linear_value = constrain(linear_value, 0.0, target_duty);
+    }
+    last_linear_update_millis = millis();
+  }
   
-  last_angular_error = angular_error;
-   angular_error += angular_target_velocity - angular_meas_velocity;
-
-   control = get_control_constants();
-
-   angular_control =  (control.kp_angular * angular_error) +
-     (control.kd_angular * (angular_error - last_angular_error));
-
-   return angular_control;
-   
+  return (uint8_t)(constrain(linear_value, 0.0, 255.0));
 }
-

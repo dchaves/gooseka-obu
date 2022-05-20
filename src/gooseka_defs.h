@@ -15,9 +15,6 @@
 #define RIGHT_TELEMETRY_UNUSED_PIN 13
 #define RIGHT_TELEMETRY_SERIAL_BAUDS 115200
 
-// GYRO UPDATE TIME
-#define GYRO_UPDATE_TIME 20
-
 // ESC PWM CONFIGURATION
 #define PWM_MIN 1040
 #define PWM_MAX 1960
@@ -65,5 +62,16 @@
 
 // MAGIC NUMBER TO CHECK FOR USB ERRORS
 #define MAGIC_NUMBER 0xCA
+
+// Number of ms between lineal pid executions
+#define MS_LINEAR_CONTROL 150L
+
+// Number of ms between MPPT meas
+#define MS_MPPT_MEAS 15L
+
+// Do not allow MPPT go down this value (unless linear target is lower than this value)
+#define LINEAR_MPPT_MIN 30.0
+
+#define LINEAR_MPPT_STEP 5
 
 #endif /* GOOSEKA_DEFS_H */
