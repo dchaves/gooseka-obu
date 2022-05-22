@@ -14,6 +14,10 @@
 // Do not allow MPPT go down this value (unless linear target is lower than this value)
 #define LINEAR_MPPT_MIN 30.0
 #define LINEAR_MPPT_STEP 5
+#define LINEAR_MPPT_MINSTEP 1
+#define LINEAR_MPPT_MAXSTEP 15
+#define MPPT_DIRECTION_DOWN 0
+#define MPPT_DIRECTION_UP 1
 
 typedef struct __attribute__((packed)) {
     uint32_t voltage;
