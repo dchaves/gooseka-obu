@@ -58,7 +58,7 @@ uint8_t get_step_with_mr(float mr, uint8_t direction) {
   if ((mr >= LINEAR_MPPT_MINSTEP) && (mr <= LINEAR_MPPT_MAXSTEP)) {
     step = (uint8_t) mr;
   }
-  elif (mr > LINEAR_MPPT_MAXSTEP) {
+  else if (mr > LINEAR_MPPT_MAXSTEP) {
     step = LINEAR_MPPT_MAXSTEP;
   }
   else {
