@@ -82,7 +82,7 @@ float calculate_mr(sample_t* samples) {
 
     float mr = 0.0;
     
-    if (dev_voltage > 0) {
+    if (dev_voltage != 0) {
       mr = (voltage_mppt * dev_current) / (dev_voltage * current_mppt);
 
       }
