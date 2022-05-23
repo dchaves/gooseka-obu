@@ -51,7 +51,7 @@ uint8_t get_step_with_mr(float mr, uint8_t direction) {
   uint8_t step = 0.0;
     
   // Reverse mr when going down
-  if (direction == 0) {
+  if (direction == MPPT_DIRECTION_DOWN) {
     mr *= -1.0;
   }  
 
