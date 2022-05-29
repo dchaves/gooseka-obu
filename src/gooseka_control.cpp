@@ -43,7 +43,7 @@ void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples) {
 
 void update_mppt_up_direction() {
   
-  if (mmpt_direction == MPPT_UP_DIRECTION) {
+  if (mppt_direction == MPPT_UP_DIRECTION) {
     mppt_step += MPPT_IT_STEP;
     if (mppt_step > LINEAR_MPPT_MAXSTEP) {
       mppt_step = LINEAR_MPPT_STEP;
@@ -59,7 +59,7 @@ void update_mppt_up_direction() {
 
 void update_mppt_down_direction() {
   
-  if (mmpt_direction == MPPT_DOWN_DIRECTION) {
+  if (mppt_direction == MPPT_DOWN_DIRECTION) {
     mppt_step += MPPT_IT_STEP;
     if (mppt_step > LINEAR_MPPT_MAXSTEP) {
       mppt_step = LINEAR_MPPT_STEP;
