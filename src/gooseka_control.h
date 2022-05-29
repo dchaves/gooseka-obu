@@ -15,6 +15,15 @@
 #define LINEAR_MPPT_MIN 30.0
 #define LINEAR_MPPT_STEP 5
 
+// Max MPPT jump
+#define LINEAR_MPPT_MAXSTEP 15
+// direction of the MPPT
+#define MPPT_DOWN_DIRECTION 0
+#define MPPT_UP_DIRECTION 1
+// 
+#define MPPT_IT_STEP 2
+
+
 typedef struct __attribute__((packed)) {
     uint32_t voltage;
     uint32_t current;
