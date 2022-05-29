@@ -1,1 +1,1 @@
-![Build](https://github.com/dchaves/arduino-nano33-ble/workflows/Build/badge.svg?branch=master)
+![Build](https://github.com/dchaves/gooseka-obu/workflows/Build/badge.svg?branch=master)
