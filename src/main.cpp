@@ -15,6 +15,7 @@ void radio_receive_task(void* param) {
     ESC_control_t control;
     ESC_telemetry_t telemetry;
     sample_t samples[NUM_SAMPLES_MPPT];
+    sample_t setup_samples[NUM_SAMPLES_MPPT_SETUP];
     uint32_t last_received_millis;
     uint32_t last_sent_millis;
     Servo LEFT_ESC_servo;
@@ -28,6 +29,7 @@ void radio_receive_task(void* param) {
     memset(&telemetry,0,sizeof(ESC_telemetry_t));
     memset(&control,0,sizeof(ESC_control_t));
     memset(samples,0, NUM_SAMPLES_MPPT*sizeof(sample_t));
+    memset(setup_samples, 0, NUM_SAMPLES_MPPT_SETUP*sizeof(sample_t));
     init_mppt();
 
     last_sent_millis = millis();
@@ -56,7 +58,7 @@ void radio_receive_task(void* param) {
             DEBUG_PRINTLN("OUT OF RANGE");
             last_received_millis = millis();
             control.linear.duty = 0;
-            control.angular.duty = 16; // 128 is translated to 0 radsps
+            control.angular.duty = 16; // 16 is to differentiate this out of range state
         }
 
         // Read Telemetry packet & EMPTY TELEMETRY QUEUE
@@ -69,8 +71,13 @@ void radio_receive_task(void* param) {
         // Check mppt meas (current and voltage)
         if(new_telemetry){ // ONLY UPDATE MEASUREMENTS IF TELEMETRY IS FRESH
           update_mppt_measurements(&telemetry, samples);
+
+          // Only add samples if linear duty is 0
+          if (control.linear.duty == 0) {
+            update_mppt_setup_measurements(&telemetry, setup_samples);
+          }
         }
-        uint8_t mppt_linear_duty = calculate_mppt_duty(control.linear.duty, samples);
+        uint8_t mppt_linear_duty = calculate_mppt_duty(control.linear.duty, samples, setup_samples);
         
         // Manual control
         float angular_pid_duty = angular_to_linear(control.angular.duty, mppt_linear_duty);
