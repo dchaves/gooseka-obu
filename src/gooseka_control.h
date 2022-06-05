@@ -30,9 +30,9 @@ typedef struct __attribute__((packed)) {
 
 float angular_to_linear(uint8_t angular_duty, float linear_value);
 void init_mppt();
-void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples, sample_t* setup_samples);
+void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples);
 void update_mppt_setup_measurements(ESC_telemetry_t* telemetry, sample_t*samples);
-uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples);
+uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples, sample_t* setup_samples);
 
 #endif /* GOOSEKA_CONTROL_H */
 
