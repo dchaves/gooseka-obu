@@ -42,7 +42,7 @@ void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples) {
   }
 }
 
-float get_mppt_voltage(samples_t* samples, int8_t num_samples) {
+float get_mppt_voltage(sample_t* samples, uint8_t num_samples) {
 
   float ref_voltage = 0.0;
   uint32_t num_samples = 0;
@@ -90,7 +90,7 @@ uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples, sample_t* se
         if (current_voltage > MPPT_VOLTAGE_NORMAL_RATIO * ref_voltage) {
           up_step = LINEAR_MPPT_MAX_STEP;
           down_step = LINEAR_MPPT_MIN_STEP;
-        } else if (current_voltage < MPPT_VOLTAGE_DANGER_RATION * ref_voltage) {
+        } else if (current_voltage < MPPT_VOLTAGE_DANGER_RATIO * ref_voltage) {
           up_step = LINEAR_MPPT_MIN_STEP;
           down_step = LINEAR_MPPT_MAX_STEP;
         }
