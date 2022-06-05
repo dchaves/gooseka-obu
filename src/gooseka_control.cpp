@@ -42,12 +42,12 @@ void update_mppt_measurements(ESC_telemetry_t* telemetry, sample_t* samples) {
   }
 }
 
-float get_mppt_voltage(sample_t* samples, uint8_t num_samples) {
+float get_mppt_voltage(sample_t* samples, uint8_t num_samples_array) {
 
   float ref_voltage = 0.0;
   uint32_t num_samples = 0;
   
-  for (int i = 0; i < num_samples; i++){
+  for (int i = 0; i < num_samples_array; i++){
     if (samples[i].voltage > 0) {
       ref_voltage += samples[i].voltage;
     }    
