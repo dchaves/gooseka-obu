@@ -78,7 +78,7 @@ uint8_t calculate_mppt_duty(uint8_t target_duty, sample_t* samples, sample_t* se
       linear_mppt += samples[i].current * samples[i].voltage;
     }
 
-    float ref_voltage = get_mppt_voltage(samples, NUM_SAMPLES_MPPT_SETUP);
+    float ref_voltage = get_mppt_voltage(setup_samples, NUM_SAMPLES_MPPT_SETUP);
     float current_voltage = get_mppt_voltage(samples, NUM_SAMPLES_MPPT);
 
     uint32_t up_step = LINEAR_MPPT_STEP;
