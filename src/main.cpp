@@ -62,6 +62,13 @@ void radio_receive_task(void* param) {
         // Read Telemetry packet & EMPTY TELEMETRY QUEUE
         if(xQueueReceive(telemetry_queue, &telemetry, 0)) { 
           new_telemetry = true;
+          telemetry.right.current = telemetry.left.current;
+          telemetry.right.voltage = telemetry.left.voltage;
+          telemetry.right.power = telemetry.left.power;
+          telemetry.right.erpm = telemetry.left.erpm;
+          telemetry.right.temperature = telemetry.left.temperature;
+          telemetry.right.timestamp = telemetry.left.timestamp;
+          telemetry.right.duty = telemetry.left.duty;
         } else {
           new_telemetry = false;
         }
@@ -163,7 +170,7 @@ void ESC_control_task(void* param) {
             }
         }
 
-        if(LEFT_telemetry_complete && RIGHT_telemetry_complete) {
+        if(LEFT_telemetry_complete /*&& RIGHT_telemetry_complete*/) {
             LEFT_telemetry_complete = false;
             RIGHT_telemetry_complete = false;
             // DEBUG_TELEMETRY(&Serial, &telemetry);
