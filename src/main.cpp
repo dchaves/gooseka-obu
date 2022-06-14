@@ -62,7 +62,8 @@ void radio_receive_task(void* param) {
         // Read Telemetry packet & EMPTY TELEMETRY QUEUE
         if(xQueueReceive(telemetry_queue, &telemetry, 0)) { 
           new_telemetry = true;
-          telemetry.right.current = telemetry.left.current;
+          float current_factor = 1.0 - ((control.angular.duty - 128.0) / 128.0);
+          telemetry.right.current = (uint16_t)(telemetry.left.current * current_factor);
           telemetry.right.voltage = telemetry.left.voltage;
           telemetry.right.power = telemetry.left.power;
           telemetry.right.erpm = telemetry.left.erpm;
